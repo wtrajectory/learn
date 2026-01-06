@@ -194,7 +194,7 @@
             background: white;
             border-radius: 24px;
             padding: 70px 40px;
-            margin: 0 auto 35px;
+            margin: 0 auto 30px;
             box-shadow: 0 12px 35px rgba(0,0,0,0.25);
             position: relative;
             min-height: 240px;
@@ -244,9 +244,8 @@
         }
 
         .unit-info {
-            position: absolute;
-            bottom: 18px;
-            right: 18px;
+            position: relative;
+            margin-top: 6px;
             background: linear-gradient(135deg, #FF6B6B, #FF8E53);
             color: white;
             padding: 8px 16px;
@@ -254,30 +253,36 @@
             font-size: 14px;
             font-weight: bold;
             box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+            display: inline-block;
         }
 
         /* 添加按钮 */
         .add-btn {
-            background: linear-gradient(135deg, #43A047, #2E7D32);
-            color: white;
-            border: none;
-            border-radius: 28px;
-            padding: 14px 36px;
-            font-size: 18px;
+            background: transparent;
+            color: #43A047;
+            border: 3px solid #43A047;
+            border-radius: 50%;
+            width: 46px;
+            height: 46px;
+            font-size: 26px;
             font-weight: bold;
             cursor: pointer;
             transition: all 0.15s ease-out;
-            box-shadow: 0 5px 15px rgba(67, 160, 71, 0.4);
-            min-width: 140px;
-            margin-top: 20px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: absolute;
+            right: 18px;
+            bottom: 18px;
             will-change: transform;
             transform: translateZ(0);
             -webkit-transform: translateZ(0);
         }
 
         .add-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 20px rgba(67, 160, 71, 0.6);
+            transform: translateZ(0) scale(1.1);
+            box-shadow: 0 6px 14px rgba(67, 160, 71, 0.5);
         }
 
         /* 清除按钮 */
@@ -301,38 +306,46 @@
 
         /* 導航按鈕 */
         .nav-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 25px;
+            display: none;
         }
 
         .nav-btn {
             background: linear-gradient(135deg, #FF9800, #FF5722);
             color: white;
             border: none;
-            border-radius: 28px;
-            padding: 14px 36px;
-            font-size: 18px;
+            border-radius: 50%;
+            width: 54px;
+            height: 54px;
+            font-size: 26px;
             font-weight: bold;
             cursor: pointer;
             transition: all 0.15s ease-out;
             box-shadow: 0 5px 15px rgba(255, 87, 34, 0.4);
-            min-width: 140px;
             will-change: transform;
-            transform: translateZ(0);
-            -webkit-transform: translateZ(0);
+            transform: translateY(-50%) translateZ(0);
+            -webkit-transform: translateY(-50%) translateZ(0);
+            position: absolute;
+            top: 50%;
         }
 
         .nav-btn:hover {
-            transform: translateY(-3px);
+            transform: translateY(-50%) scale(1.1);
             box-shadow: 0 8px 20px rgba(255, 87, 34, 0.6);
         }
 
         .nav-btn:disabled {
             background: #BDBDBD;
             cursor: not-allowed;
-            transform: none;
+            transform: translateY(-50%);
             box-shadow: none;
+        }
+
+        .nav-btn-left {
+            left: 18px;
+        }
+
+        .nav-btn-right {
+            right: 18px;
         }
 
         /* 懸浮窗 - 單元詞彙預覽 */
@@ -469,7 +482,7 @@
 
         @media (max-width: 480px) {
             body {
-                padding: 10px;
+                padding: 10px 8px;
                 justify-content: center;
                 align-items: center;
             }
@@ -530,6 +543,41 @@
             }
         }
 
+        /* 針對螢幕高度做縮放，避免底部圓圈被遮住 */
+        @media (max-height: 700px) {
+            .flashcard {
+                margin-bottom: 24px;
+                padding: 60px 30px;
+                min-height: 210px;
+            }
+
+            .unit-panel {
+                bottom: 10px;
+            }
+        }
+
+        @media (max-height: 620px) {
+            .flashcard-container {
+                transform: scale(0.9);
+                transform-origin: center top;
+            }
+
+            .unit-panel {
+                transform: translateX(-50%) scale(0.9);
+            }
+        }
+
+        @media (max-height: 540px) {
+            .flashcard-container {
+                transform: scale(0.82);
+            }
+
+            .unit-panel {
+                transform: translateX(-50%) scale(0.85);
+                bottom: 6px;
+            }
+        }
+
         /* 手機上避免按鈕連點觸發縮放 */
         .btn,
         .nav-btn {
@@ -544,6 +592,19 @@
             gap: 16px;
         }
 
+        /* 全螢幕控制按鈕維持原本長條樣式，不受閃卡內導航圓鈕影響 */
+        .fullscreen-controls .nav-btn {
+            position: static;
+            top: auto;
+            border-radius: 28px;
+            width: auto;
+            height: auto;
+            padding: 14px 36px;
+            font-size: 18px;
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
+        }
+
         #exitFullscreenBtn {
             display: none;
         }
@@ -551,6 +612,10 @@
         .fullscreen-mode .control-panel,
         .fullscreen-mode .unit-panel,
         .fullscreen-mode .modal-overlay {
+            display: none;
+        }
+
+        .fullscreen-mode #unitInfo {
             display: none;
         }
 
@@ -639,17 +704,14 @@
         </div>
 
         <div class="flashcard">
+            <button id="prevBtn" class="nav-btn nav-btn-left">◀</button>
+            <button id="nextBtn" class="nav-btn nav-btn-right">▶</button>
             <div class="word" id="wordDisplay">姓名</div>
-            <div class="unit-info" id="unitInfo">單元一：預備週</div>
-        </div>
-
-        <div class="nav-buttons">
-            <button id="prevBtn" class="nav-btn">◀ 上一個</button>
-            <button id="nextBtn" class="nav-btn">下一個 ▶</button>
+            <button id="addToReviewBtn" class="add-btn">+</button>
         </div>
 
         <div style="text-align: center;">
-            <button id="addToReviewBtn" class="add-btn">➕ 添加到重點複習</button>
+            <div class="unit-info" id="unitInfo">單元一：預備週</div>
         </div>
 
         <div class="fullscreen-controls">
