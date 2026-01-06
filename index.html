@@ -224,19 +224,23 @@
             transform: translateZ(0);
             -webkit-transform: translateZ(0);
             white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            overflow: visible;
             max-width: 100%;
             box-sizing: border-box;
+            opacity: 1;
+            transition: opacity 0.1s ease;
         }
 
         .word.english {
             font-size: 64px;
             font-family: 'Segoe UI', 'Arial', sans-serif;
             white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            overflow: visible;
             max-width: 100%;
+        }
+
+        .word.adjusting {
+            opacity: 0.3;
         }
 
         .unit-info {
@@ -994,9 +998,14 @@
                 }
             }
             
-            // 立即更新顯示
+            // 先設置為調整狀態（降低透明度）
+            wordDisplay.className = `word adjusting ${isChinese ? '' : 'english'}`;
+            
+            // 先設置文字內容（但不顯示，等待字體調整）
             wordDisplay.textContent = displayText || '沒有詞彙';
-            wordDisplay.className = `word ${isChinese ? '' : 'english'}`;
+            
+            // 立即調整字體大小（同步執行，避免跳動）
+            adjustFontSizeSync();
             
             // 顯示單元標籤
             if (foundData.unit === 'review') {
@@ -1009,10 +1018,10 @@
             prevBtn.disabled = false;
             nextBtn.disabled = false;
             
-            // 異步調整字體大小，不阻塞
-            setTimeout(() => {
-                adjustFontSize();
-            }, 100);
+            // 恢復正常顯示
+            requestAnimationFrame(() => {
+                wordDisplay.className = `word ${isChinese ? '' : 'english'}`;
+            });
         }
 
         // 更新閃卡內容（原有版本，用於其他情況）
@@ -1020,7 +1029,58 @@
             updateFlashcardSync();
         }
 
-        // 動態調整字體大小以適應屏幕寬度（輕量版本，避免阻塞）
+        // 同步調整字體大小（立即執行，避免跳動）
+        function adjustFontSizeSync() {
+            try {
+                const wordElement = wordDisplay;
+                if (!wordElement || !wordElement.textContent || wordElement.textContent === '沒有詞彙') {
+                    return;
+                }
+                
+                const flashcard = wordElement.closest('.flashcard');
+                if (!flashcard || flashcard.offsetWidth === 0) {
+                    return;
+                }
+                
+                // 獲取可用寬度
+                const flashcardWidth = flashcard.offsetWidth;
+                const padding = 80;
+                const availableWidth = flashcardWidth - padding;
+                
+                if (availableWidth <= 0) return;
+                
+                // 使用簡化的計算方式
+                const baseFontSize = isChinese ? 72 : 64;
+                const textLength = wordElement.textContent.length;
+                
+                // 根據文字長度和可用寬度計算合適的字體大小
+                // 中文字符約佔字體大小的60%，英文字符約佔50%
+                const charWidthRatio = isChinese ? 0.6 : 0.5;
+                const estimatedWidth = textLength * (baseFontSize * charWidthRatio);
+                
+                let newSize;
+                if (estimatedWidth > availableWidth) {
+                    // 需要縮小
+                    newSize = Math.max(20, Math.floor(availableWidth / (textLength * charWidthRatio)));
+                } else {
+                    // 可以使用基礎大小或適當放大
+                    const maxSize = baseFontSize;
+                    newSize = Math.min(maxSize, Math.floor(availableWidth / (textLength * charWidthRatio)));
+                    // 如果計算出的字體太大，使用基礎大小
+                    if (newSize > maxSize) {
+                        newSize = maxSize;
+                    }
+                }
+                
+                // 立即應用字體大小
+                wordElement.style.fontSize = newSize + 'px';
+            } catch (e) {
+                // 忽略錯誤，不影響主功能
+                console.error('Font size adjustment error:', e);
+            }
+        }
+
+        // 異步調整字體大小（用於窗口大小變化等情況）
         let fontSizeAdjustTimer = null;
         function adjustFontSize() {
             // 清除之前的定時器
@@ -1028,48 +1088,10 @@
                 clearTimeout(fontSizeAdjustTimer);
             }
             
-            // 使用防抖，延遲執行，不阻塞主線程
+            // 使用防抖，延遲執行
             fontSizeAdjustTimer = setTimeout(() => {
-                try {
-                    const wordElement = wordDisplay;
-                    if (!wordElement || !wordElement.textContent || wordElement.textContent === '沒有詞彙') {
-                        return;
-                    }
-                    
-                    const flashcard = wordElement.closest('.flashcard');
-                    if (!flashcard || flashcard.offsetWidth === 0) {
-                        return;
-                    }
-                    
-                    // 獲取可用寬度
-                    const flashcardWidth = flashcard.offsetWidth;
-                    const padding = 80;
-                    const availableWidth = flashcardWidth - padding;
-                    
-                    if (availableWidth <= 0) return;
-                    
-                    // 使用簡化的計算方式，避免複雜的二分法
-                    const computedStyle = window.getComputedStyle(wordElement);
-                    const currentFontSize = parseFloat(computedStyle.fontSize) || (isChinese ? 72 : 64);
-                    
-                    // 簡單估算：如果文字太長，按比例縮小
-                    const textLength = wordElement.textContent.length;
-                    const estimatedWidth = textLength * (currentFontSize * 0.6); // 粗略估算
-                    
-                    if (estimatedWidth > availableWidth) {
-                        const newSize = Math.max(20, Math.floor(availableWidth / (textLength * 0.6)));
-                        wordElement.style.fontSize = newSize + 'px';
-                    } else if (estimatedWidth < availableWidth * 0.7 && currentFontSize < (isChinese ? 72 : 64)) {
-                        // 可以適當放大
-                        const maxSize = isChinese ? 72 : 64;
-                        const newSize = Math.min(maxSize, Math.floor(availableWidth / (textLength * 0.6)));
-                        wordElement.style.fontSize = newSize + 'px';
-                    }
-                } catch (e) {
-                    // 忽略錯誤，不影響主功能
-                    console.error('Font size adjustment error:', e);
-                }
-            }, 150); // 增加防抖時間，減少頻繁計算
+                adjustFontSizeSync();
+            }, 150);
         }
 
         // 初始化
