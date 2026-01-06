@@ -223,11 +223,20 @@
             will-change: contents;
             transform: translateZ(0);
             -webkit-transform: translateZ(0);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+            box-sizing: border-box;
         }
 
         .word.english {
             font-size: 64px;
             font-family: 'Segoe UI', 'Arial', sans-serif;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
         }
 
         .unit-info {
@@ -462,12 +471,14 @@
             }
 
             .word {
-                font-size: 58px;
+                font-size: clamp(24px, 12vw, 58px);
                 padding: 0 15px;
+                max-width: calc(100vw - 80px);
             }
             
             .word.english {
-                font-size: 52px;
+                font-size: clamp(22px, 11vw, 52px);
+                max-width: calc(100vw - 80px);
             }
             
             .flashcard {
@@ -505,11 +516,13 @@
 
         @media (max-width: 360px) {
             .word {
-                font-size: 44px;
+                font-size: clamp(20px, 10vw, 44px);
+                max-width: calc(100vw - 60px);
             }
             
             .word.english {
-                font-size: 40px;
+                font-size: clamp(18px, 9vw, 40px);
+                max-width: calc(100vw - 60px);
             }
         }
 
@@ -972,6 +985,86 @@
             // 移除按鈕禁用，使用循環模式
             prevBtn.disabled = false;
             nextBtn.disabled = false;
+            
+            // 異步調整字體大小，避免阻塞UI更新
+            requestAnimationFrame(() => {
+                adjustFontSize();
+            });
+        }
+
+        // 動態調整字體大小以適應屏幕寬度（優化版本，避免阻塞）
+        let fontSizeAdjustTimer = null;
+        function adjustFontSize() {
+            // 清除之前的定時器
+            if (fontSizeAdjustTimer) {
+                clearTimeout(fontSizeAdjustTimer);
+            }
+            
+            // 使用防抖，延遲執行
+            fontSizeAdjustTimer = setTimeout(() => {
+                const wordElement = wordDisplay;
+                if (!wordElement || !wordElement.textContent) return;
+                
+                const flashcard = wordElement.closest('.flashcard');
+                if (!flashcard) return;
+                
+                // 獲取可用寬度（閃卡寬度減去padding）
+                const flashcardWidth = flashcard.offsetWidth;
+                const padding = 80; // 左右padding總和
+                const availableWidth = flashcardWidth - padding;
+                
+                if (availableWidth <= 0) return;
+                
+                // 獲取當前字體大小
+                const computedStyle = window.getComputedStyle(wordElement);
+                let currentFontSize = parseFloat(computedStyle.fontSize) || (isChinese ? 72 : 64);
+                
+                // 創建臨時元素測量文字寬度（只創建一次）
+                const tempElement = document.createElement('span');
+                tempElement.style.visibility = 'hidden';
+                tempElement.style.position = 'absolute';
+                tempElement.style.whiteSpace = 'nowrap';
+                tempElement.style.fontFamily = computedStyle.fontFamily;
+                tempElement.style.fontWeight = computedStyle.fontWeight;
+                tempElement.textContent = wordElement.textContent;
+                document.body.appendChild(tempElement);
+                
+                // 使用二分法快速找到合適的字體大小，避免阻塞
+                let minSize = 20;
+                let maxSize = isChinese ? 72 : 64;
+                let optimalSize = currentFontSize;
+                
+                // 先檢查當前大小是否合適
+                tempElement.style.fontSize = currentFontSize + 'px';
+                let textWidth = tempElement.offsetWidth;
+                
+                if (textWidth > availableWidth) {
+                    // 需要縮小，使用二分法
+                    optimalSize = currentFontSize;
+                    while (maxSize - minSize > 1) {
+                        const testSize = Math.floor((minSize + maxSize) / 2);
+                        tempElement.style.fontSize = testSize + 'px';
+                        textWidth = tempElement.offsetWidth;
+                        
+                        if (textWidth > availableWidth) {
+                            maxSize = testSize;
+                        } else {
+                            minSize = testSize;
+                            optimalSize = testSize;
+                        }
+                    }
+                } else if (textWidth < availableWidth * 0.8 && currentFontSize < maxSize) {
+                    // 可以適當放大
+                    optimalSize = Math.min(Math.floor(availableWidth / (textWidth / currentFontSize)), maxSize);
+                }
+                
+                document.body.removeChild(tempElement);
+                
+                // 應用新字體大小
+                if (optimalSize !== currentFontSize) {
+                    wordElement.style.fontSize = optimalSize + 'px';
+                }
+            }, 50); // 50ms 防抖
         }
 
         // 初始化
@@ -1012,7 +1105,10 @@
             updateFlashcard();
         });
 
-        prevBtn.addEventListener('click', () => {
+        prevBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
             const currentVocab = getCurrentVocabulary();
             if (currentVocab.length === 0) return;
             
@@ -1022,10 +1118,16 @@
             } else {
                 currentIndex--;
             }
+            
+            // 立即更新顯示，不等待字體調整
             updateFlashcard();
+            return false;
         });
 
-        nextBtn.addEventListener('click', () => {
+        nextBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
             const currentVocab = getCurrentVocabulary();
             if (currentVocab.length === 0) return;
             
@@ -1035,7 +1137,10 @@
             } else {
                 currentIndex++;
             }
+            
+            // 立即更新顯示，不等待字體調整
             updateFlashcard();
+            return false;
         });
 
         // 鍵盤快捷鍵
@@ -1461,6 +1566,21 @@
             window.scrollTo(0, 0);
             document.body.style.overflow = 'hidden';
             document.documentElement.style.overflow = 'hidden';
+            // 初始調整字體大小
+            if (wordDisplay) {
+                adjustFontSize();
+            }
+        });
+
+        // 監聽窗口大小變化，重新調整字體大小
+        let resizeTimer;
+        window.addEventListener('resize', function() {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(function() {
+                if (wordDisplay) {
+                    adjustFontSize();
+                }
+            }, 100);
         });
     </script>
 </body>
