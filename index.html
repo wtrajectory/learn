@@ -22,17 +22,37 @@
             -moz-user-select: none;
             -ms-user-select: none;
             user-select: none;
-        }
-
-        body {
             font-family: 'Segoe UI', 'Microsoft JhengHei', 'PingFang SC', sans-serif;
             background: #000;
             min-height: 100vh;
+            height: 100vh !important;
+            max-height: 100vh !important;
+            overflow: hidden !important;
             display: flex;
             justify-content: center;
             align-items: center;
             padding: 20px;
-            position: relative;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            touch-action: pan-x; /* 只允許水平滑動 */
+            overscroll-behavior: none;
+            -webkit-overflow-scrolling: none;
+        }
+
+        html {
+            overflow: hidden !important;
+            height: 100% !important;
+            position: fixed !important;
+            width: 100% !important;
+            overscroll-behavior: none;
+            -webkit-overflow-scrolling: none;
+        }
+
+        * {
+            overscroll-behavior: none;
+            -webkit-overflow-scrolling: none;
         }
 
         .flashcard-container {
@@ -1219,13 +1239,16 @@
             }
         });
 
-        // 手機滑動功能
+        // 手機滑動功能 - 統一的觸摸變數
         let touchStartX = 0;
+        let touchStartY = 0;
         let touchEndX = 0;
         const flashcard = document.querySelector('.flashcard');
 
+        // 處理閃卡區域的觸摸（用於切換卡片）
         flashcard.addEventListener('touchstart', (e) => {
             touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
         }, { passive: true });
 
         flashcard.addEventListener('touchend', (e) => {
@@ -1287,6 +1310,115 @@
         document.addEventListener('paste', function(e) {
             e.preventDefault();
             return false;
+        });
+
+        // 禁用頁面滾動（手機端）- 完全阻止上下滾動
+        // 使用全局的 touchStartX 和 touchStartY 變數（已在上面定義）
+        
+        document.addEventListener('touchstart', function(e) {
+            // 如果不是閃卡區域，更新觸摸起始位置
+            const flashcard = document.querySelector('.flashcard');
+            if (!flashcard || !flashcard.contains(e.target)) {
+                touchStartY = e.touches[0].clientY;
+                touchStartX = e.touches[0].clientX;
+            }
+        }, { passive: true });
+
+        document.addEventListener('touchmove', function(e) {
+            const flashcard = document.querySelector('.flashcard');
+            
+            // 如果是閃卡區域，允許水平滑動（用於切換卡片）
+            if (flashcard && flashcard.contains(e.target)) {
+                const touchCurrentY = e.touches[0].clientY;
+                const touchCurrentX = e.touches[0].clientX;
+                const diffY = Math.abs(touchCurrentY - touchStartY);
+                const diffX = Math.abs(touchCurrentX - touchStartX);
+                
+                // 如果是垂直滑動，阻止它
+                if (diffY > diffX) {
+                    e.preventDefault();
+                    return false;
+                }
+                // 水平滑動允許
+                return;
+            }
+            
+            // 其他區域完全禁止滾動
+            e.preventDefault();
+        }, { passive: false });
+
+        // 禁用頁面滾動（桌面端）- 完全阻止
+        document.addEventListener('wheel', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        }, { passive: false });
+
+        // 禁用頁面滾動（滾動條）
+        document.addEventListener('scroll', function(e) {
+            window.scrollTo(0, 0);
+            e.preventDefault();
+        }, { passive: false });
+
+        // 鎖定滾動位置
+        window.addEventListener('scroll', function() {
+            window.scrollTo(0, 0);
+        });
+
+        // 在頁面加載時鎖定滾動
+        window.addEventListener('load', function() {
+            window.scrollTo(0, 0);
+            document.body.scrollTop = 0;
+            document.documentElement.scrollTop = 0;
+        });
+
+        // 禁用頁面滾動（鍵盤）- 只阻止上下滾動相關的按鍵
+        document.addEventListener('keydown', function(e) {
+            // 禁止上下方向鍵滾動頁面（左右方向鍵已用於切換卡片，不阻止）
+            if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                // 只有在不是用於切換卡片時才阻止
+                if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') {
+                    e.preventDefault();
+                }
+            }
+            // 禁止空格鍵和Page Up/Down滾動頁面
+            if (e.key === ' ' || e.key === 'PageUp' || e.key === 'PageDown') {
+                if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') {
+                    e.preventDefault();
+                }
+            }
+        }, true);
+
+        // 防止雙擊縮放
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function(e) {
+            const now = Date.now();
+            if (now - lastTouchEnd <= 300) {
+                e.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
+
+        // 持續鎖定滾動位置
+        setInterval(function() {
+            if (window.scrollY !== 0 || window.scrollX !== 0) {
+                window.scrollTo(0, 0);
+            }
+            if (document.body.scrollTop !== 0 || document.body.scrollLeft !== 0) {
+                document.body.scrollTop = 0;
+                document.body.scrollLeft = 0;
+            }
+            if (document.documentElement.scrollTop !== 0 || document.documentElement.scrollLeft !== 0) {
+                document.documentElement.scrollTop = 0;
+                document.documentElement.scrollLeft = 0;
+            }
+        }, 100);
+
+        // 在DOMContentLoaded時立即鎖定
+        document.addEventListener('DOMContentLoaded', function() {
+            window.scrollTo(0, 0);
+            document.body.style.overflow = 'hidden';
+            document.documentElement.style.overflow = 'hidden';
         });
     </script>
 </body>
