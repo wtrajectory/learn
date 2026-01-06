@@ -924,75 +924,103 @@
             }
         }
 
-        // 更新閃卡內容（關鍵：安全取值）
-        function updateFlashcard() {
+        // 同步更新閃卡內容（快速版本，不等待字體調整）
+        function updateFlashcardSync() {
             const currentVocab = getCurrentVocabulary();
             if (currentVocab.length === 0) {
                 wordDisplay.textContent = '沒有詞彙';
                 unitInfo.textContent = '';
                 prevBtn.disabled = false;
                 nextBtn.disabled = false;
+                isUpdating = false;
                 return;
+            }
+            
+            // 確保索引有效
+            if (currentIndex >= displayOrder.length) {
+                currentIndex = 0;
+            }
+            if (currentIndex < 0) {
+                currentIndex = displayOrder.length - 1;
             }
             
             const wordIndex = displayOrder[currentIndex];
             const wordData = currentVocab[wordIndex];
             
-            // 安全取值：若當前模式無對應語言，則跳至下一筆有效詞條
+            if (!wordData) {
+                isUpdating = false;
+                return;
+            }
+            
+            // 安全取值：若當前模式無對應語言，則隨機找一個有效的
             let displayText = '';
+            let foundData = wordData;
+            
             if (isChinese) {
                 displayText = wordData.chinese ?? '';
-                // 若當前卡片無中文，自動找下一個有中文的
                 if (displayText === '') {
-                    let nextIndex = currentIndex;
-                    do {
-                        nextIndex = (nextIndex + 1) % displayOrder.length;
-                        const nextData = currentVocab[displayOrder[nextIndex]];
-                        if (nextData && nextData.chinese) {
-                            currentIndex = nextIndex;
-                            displayText = nextData.chinese;
-                            break;
+                    // 隨機找一個有中文的
+                    const validIndices = [];
+                    for (let i = 0; i < currentVocab.length; i++) {
+                        if (currentVocab[i].chinese) {
+                            validIndices.push(i);
                         }
-                    } while (nextIndex !== currentIndex);
+                    }
+                    if (validIndices.length > 0) {
+                        const randomValidIndex = validIndices[Math.floor(Math.random() * validIndices.length)];
+                        currentIndex = displayOrder.indexOf(randomValidIndex);
+                        if (currentIndex === -1) currentIndex = 0;
+                        foundData = currentVocab[randomValidIndex];
+                        displayText = foundData.chinese;
+                    }
                 }
             } else {
                 displayText = wordData.english ?? '';
-                // 若當前卡片無英文，自動找下一個有英文的
                 if (displayText === '') {
-                    let nextIndex = currentIndex;
-                    do {
-                        nextIndex = (nextIndex + 1) % displayOrder.length;
-                        const nextData = currentVocab[displayOrder[nextIndex]];
-                        if (nextData && nextData.english) {
-                            currentIndex = nextIndex;
-                            displayText = nextData.english;
-                            break;
+                    // 隨機找一個有英文的
+                    const validIndices = [];
+                    for (let i = 0; i < currentVocab.length; i++) {
+                        if (currentVocab[i].english) {
+                            validIndices.push(i);
                         }
-                    } while (nextIndex !== currentIndex);
+                    }
+                    if (validIndices.length > 0) {
+                        const randomValidIndex = validIndices[Math.floor(Math.random() * validIndices.length)];
+                        currentIndex = displayOrder.indexOf(randomValidIndex);
+                        if (currentIndex === -1) currentIndex = 0;
+                        foundData = currentVocab[randomValidIndex];
+                        displayText = foundData.english;
+                    }
                 }
             }
             
-            wordDisplay.textContent = displayText;
+            // 立即更新顯示
+            wordDisplay.textContent = displayText || '沒有詞彙';
             wordDisplay.className = `word ${isChinese ? '' : 'english'}`;
             
             // 顯示單元標籤
-            if (wordData.unit === 'review') {
+            if (foundData.unit === 'review') {
                 unitInfo.textContent = '重點複習';
             } else {
-                unitInfo.textContent = `單元${wordData.unit}：${unitThemes[wordData.unit]}`;
+                unitInfo.textContent = `單元${foundData.unit}：${unitThemes[foundData.unit]}`;
             }
             
-            // 移除按鈕禁用，使用循環模式
+            // 移除按鈕禁用
             prevBtn.disabled = false;
             nextBtn.disabled = false;
             
-            // 異步調整字體大小，避免阻塞UI更新
-            requestAnimationFrame(() => {
+            // 異步調整字體大小，不阻塞
+            setTimeout(() => {
                 adjustFontSize();
-            });
+            }, 100);
         }
 
-        // 動態調整字體大小以適應屏幕寬度（優化版本，避免阻塞）
+        // 更新閃卡內容（原有版本，用於其他情況）
+        function updateFlashcard() {
+            updateFlashcardSync();
+        }
+
+        // 動態調整字體大小以適應屏幕寬度（輕量版本，避免阻塞）
         let fontSizeAdjustTimer = null;
         function adjustFontSize() {
             // 清除之前的定時器
@@ -1000,71 +1028,48 @@
                 clearTimeout(fontSizeAdjustTimer);
             }
             
-            // 使用防抖，延遲執行
+            // 使用防抖，延遲執行，不阻塞主線程
             fontSizeAdjustTimer = setTimeout(() => {
-                const wordElement = wordDisplay;
-                if (!wordElement || !wordElement.textContent) return;
-                
-                const flashcard = wordElement.closest('.flashcard');
-                if (!flashcard) return;
-                
-                // 獲取可用寬度（閃卡寬度減去padding）
-                const flashcardWidth = flashcard.offsetWidth;
-                const padding = 80; // 左右padding總和
-                const availableWidth = flashcardWidth - padding;
-                
-                if (availableWidth <= 0) return;
-                
-                // 獲取當前字體大小
-                const computedStyle = window.getComputedStyle(wordElement);
-                let currentFontSize = parseFloat(computedStyle.fontSize) || (isChinese ? 72 : 64);
-                
-                // 創建臨時元素測量文字寬度（只創建一次）
-                const tempElement = document.createElement('span');
-                tempElement.style.visibility = 'hidden';
-                tempElement.style.position = 'absolute';
-                tempElement.style.whiteSpace = 'nowrap';
-                tempElement.style.fontFamily = computedStyle.fontFamily;
-                tempElement.style.fontWeight = computedStyle.fontWeight;
-                tempElement.textContent = wordElement.textContent;
-                document.body.appendChild(tempElement);
-                
-                // 使用二分法快速找到合適的字體大小，避免阻塞
-                let minSize = 20;
-                let maxSize = isChinese ? 72 : 64;
-                let optimalSize = currentFontSize;
-                
-                // 先檢查當前大小是否合適
-                tempElement.style.fontSize = currentFontSize + 'px';
-                let textWidth = tempElement.offsetWidth;
-                
-                if (textWidth > availableWidth) {
-                    // 需要縮小，使用二分法
-                    optimalSize = currentFontSize;
-                    while (maxSize - minSize > 1) {
-                        const testSize = Math.floor((minSize + maxSize) / 2);
-                        tempElement.style.fontSize = testSize + 'px';
-                        textWidth = tempElement.offsetWidth;
-                        
-                        if (textWidth > availableWidth) {
-                            maxSize = testSize;
-                        } else {
-                            minSize = testSize;
-                            optimalSize = testSize;
-                        }
+                try {
+                    const wordElement = wordDisplay;
+                    if (!wordElement || !wordElement.textContent || wordElement.textContent === '沒有詞彙') {
+                        return;
                     }
-                } else if (textWidth < availableWidth * 0.8 && currentFontSize < maxSize) {
-                    // 可以適當放大
-                    optimalSize = Math.min(Math.floor(availableWidth / (textWidth / currentFontSize)), maxSize);
+                    
+                    const flashcard = wordElement.closest('.flashcard');
+                    if (!flashcard || flashcard.offsetWidth === 0) {
+                        return;
+                    }
+                    
+                    // 獲取可用寬度
+                    const flashcardWidth = flashcard.offsetWidth;
+                    const padding = 80;
+                    const availableWidth = flashcardWidth - padding;
+                    
+                    if (availableWidth <= 0) return;
+                    
+                    // 使用簡化的計算方式，避免複雜的二分法
+                    const computedStyle = window.getComputedStyle(wordElement);
+                    const currentFontSize = parseFloat(computedStyle.fontSize) || (isChinese ? 72 : 64);
+                    
+                    // 簡單估算：如果文字太長，按比例縮小
+                    const textLength = wordElement.textContent.length;
+                    const estimatedWidth = textLength * (currentFontSize * 0.6); // 粗略估算
+                    
+                    if (estimatedWidth > availableWidth) {
+                        const newSize = Math.max(20, Math.floor(availableWidth / (textLength * 0.6)));
+                        wordElement.style.fontSize = newSize + 'px';
+                    } else if (estimatedWidth < availableWidth * 0.7 && currentFontSize < (isChinese ? 72 : 64)) {
+                        // 可以適當放大
+                        const maxSize = isChinese ? 72 : 64;
+                        const newSize = Math.min(maxSize, Math.floor(availableWidth / (textLength * 0.6)));
+                        wordElement.style.fontSize = newSize + 'px';
+                    }
+                } catch (e) {
+                    // 忽略錯誤，不影響主功能
+                    console.error('Font size adjustment error:', e);
                 }
-                
-                document.body.removeChild(tempElement);
-                
-                // 應用新字體大小
-                if (optimalSize !== currentFontSize) {
-                    wordElement.style.fontSize = optimalSize + 'px';
-                }
-            }, 50); // 50ms 防抖
+            }, 150); // 增加防抖時間，減少頻繁計算
         }
 
         // 初始化
@@ -1105,22 +1110,43 @@
             updateFlashcard();
         });
 
+        // 按鈕點擊防抖
+        let buttonClickTimer = null;
+        let isUpdating = false;
+
         prevBtn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
             
+            // 防止重複點擊
+            if (isUpdating || buttonClickTimer) return;
+            
             const currentVocab = getCurrentVocabulary();
             if (currentVocab.length === 0) return;
             
-            // 循環模式：如果是最後一個，跳轉到第一個
-            if (currentIndex === 0) {
-                currentIndex = displayOrder.length - 1;
+            isUpdating = true;
+            
+            // 隨機跳轉到另一個單字（避免重複）
+            let newIndex;
+            if (displayOrder.length <= 1) {
+                newIndex = 0;
             } else {
-                currentIndex--;
+                do {
+                    newIndex = Math.floor(Math.random() * displayOrder.length);
+                } while (newIndex === currentIndex && displayOrder.length > 1);
             }
             
-            // 立即更新顯示，不等待字體調整
-            updateFlashcard();
+            currentIndex = newIndex;
+            
+            // 立即更新顯示
+            updateFlashcardSync();
+            
+            // 防抖，200ms後允許再次點擊
+            buttonClickTimer = setTimeout(() => {
+                buttonClickTimer = null;
+                isUpdating = false;
+            }, 200);
+            
             return false;
         });
 
@@ -1128,18 +1154,35 @@
             e.preventDefault();
             e.stopPropagation();
             
+            // 防止重複點擊
+            if (isUpdating || buttonClickTimer) return;
+            
             const currentVocab = getCurrentVocabulary();
             if (currentVocab.length === 0) return;
             
-            // 循環模式：如果是最後一個，跳轉到第一個
-            if (currentIndex === displayOrder.length - 1) {
-                currentIndex = 0;
+            isUpdating = true;
+            
+            // 隨機跳轉到另一個單字（避免重複）
+            let newIndex;
+            if (displayOrder.length <= 1) {
+                newIndex = 0;
             } else {
-                currentIndex++;
+                do {
+                    newIndex = Math.floor(Math.random() * displayOrder.length);
+                } while (newIndex === currentIndex && displayOrder.length > 1);
             }
             
-            // 立即更新顯示，不等待字體調整
-            updateFlashcard();
+            currentIndex = newIndex;
+            
+            // 立即更新顯示
+            updateFlashcardSync();
+            
+            // 防抖，200ms後允許再次點擊
+            buttonClickTimer = setTimeout(() => {
+                buttonClickTimer = null;
+                isUpdating = false;
+            }, 200);
+            
             return false;
         });
 
