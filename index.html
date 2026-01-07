@@ -664,6 +664,8 @@
             display: flex;
             justify-content: center;
             gap: 16px;
+            z-index: 100;
+            position: relative;
         }
 
         /* 全螢幕控制按鈕維持原本長條樣式，不受閃卡內導航圓鈕影響 */
@@ -686,6 +688,9 @@
             -webkit-transform: translateZ(0) !important;
             display: inline-block !important;
             flex-shrink: 1 !important;
+            z-index: 100 !important;
+            pointer-events: auto !important;
+            cursor: pointer !important;
         }
 
 
@@ -1375,12 +1380,31 @@
                 return false;
             }
             
+            // ESC鍵處理：在全螢幕模式下阻止默認行為，使用我們的退出函數
+            if (e.key === 'Escape') {
+                const isFullscreen = document.fullscreenElement || 
+                                    document.webkitFullscreenElement || 
+                                    document.msFullscreenElement || 
+                                    document.mozFullScreenElement ||
+                                    document.body.classList.contains('fullscreen-mode');
+                
+                if (isFullscreen) {
+                    // 在全螢幕模式下，阻止ESC鍵的默認行為，使用我們的退出函數
+                    e.preventDefault();
+                    e.stopPropagation();
+                    toggleFullscreen(e);
+                    return false;
+                } else {
+                    // 不在全螢幕模式下，關閉懸浮窗
+                    unitModal.classList.remove('active');
+                }
+            }
+            
             // 允許的快捷鍵
             if (e.key === 'ArrowLeft') prevBtn.click();
             else if (e.key === 'ArrowRight') nextBtn.click();
             else if (e.key.toLowerCase() === 'c' && !e.ctrlKey && !e.shiftKey) chineseBtn.click();
             else if (e.key.toLowerCase() === 'e' && !e.ctrlKey && !e.shiftKey) englishBtn.click();
-            else if (e.key === 'Escape') unitModal.classList.remove('active');
         });
 
         // 關閉懸浮窗
@@ -1539,35 +1563,122 @@
             unitModal.classList.add('active');
         }
 
+        // 全螢幕切換標誌，防止重複觸發
+        let isTogglingFullscreen = false;
+
         // 全螢幕模式切換
-        function toggleFullscreen() {
-            const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement;
+        function toggleFullscreen(e) {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            // 防止重複觸發
+            if (isTogglingFullscreen) {
+                return;
+            }
+            
+            const isFullscreen = document.fullscreenElement || 
+                                document.webkitFullscreenElement || 
+                                document.msFullscreenElement || 
+                                document.mozFullScreenElement ||
+                                document.body.classList.contains('fullscreen-mode');
+            
+            isTogglingFullscreen = true;
             
             if (isFullscreen) {
                 // 退出全螢幕
-                if (document.exitFullscreen) {
-                    document.exitFullscreen();
-                } else if (document.webkitExitFullscreen) {
-                    document.webkitExitFullscreen();
-                } else if (document.msExitFullscreen) {
-                    document.msExitFullscreen();
+                const exitPromise = document.exitFullscreen || 
+                                   document.webkitExitFullscreen || 
+                                   document.msExitFullscreen ||
+                                   document.mozCancelFullScreen;
+                
+                if (exitPromise) {
+                    try {
+                        const result = exitPromise.call(document);
+                        // 立即移除樣式類
+                        document.body.classList.remove('fullscreen-mode');
+                        
+                        if (result && result.then) {
+                            result.then(() => {
+                                updateFullscreenButton();
+                                isTogglingFullscreen = false;
+                            }).catch(err => {
+                                console.error('退出全螢幕失敗:', err);
+                                updateFullscreenButton();
+                                isTogglingFullscreen = false;
+                            });
+                        } else {
+                            // 同步執行，立即更新
+                            updateFullscreenButton();
+                            setTimeout(() => {
+                                isTogglingFullscreen = false;
+                            }, 100);
+                        }
+                    } catch (err) {
+                        console.error('退出全螢幕錯誤:', err);
+                        document.body.classList.remove('fullscreen-mode');
+                        updateFullscreenButton();
+                        isTogglingFullscreen = false;
+                    }
+                } else {
+                    document.body.classList.remove('fullscreen-mode');
+                    updateFullscreenButton();
+                    isTogglingFullscreen = false;
                 }
             } else {
                 // 進入全螢幕
                 const docEl = document.documentElement;
-                if (docEl.requestFullscreen) {
-                    docEl.requestFullscreen();
-                } else if (docEl.webkitRequestFullscreen) {
-                    docEl.webkitRequestFullscreen();
-                } else if (docEl.msRequestFullscreen) {
-                    docEl.msRequestFullscreen();
+                const requestFullscreen = docEl.requestFullscreen || 
+                                        docEl.webkitRequestFullscreen || 
+                                        docEl.msRequestFullscreen ||
+                                        docEl.mozRequestFullScreen;
+                
+                if (requestFullscreen) {
+                    try {
+                        const promise = requestFullscreen.call(docEl);
+                        if (promise && promise.then) {
+                            promise.then(() => {
+                                updateFullscreenButton();
+                                isTogglingFullscreen = false;
+                            }).catch(err => {
+                                console.error('進入全螢幕失敗:', err);
+                                // 如果全螢幕API失敗，至少切換到全螢幕模式樣式
+                                document.body.classList.add('fullscreen-mode');
+                                updateFullscreenButton();
+                                isTogglingFullscreen = false;
+                            });
+                        } else {
+                            // 延遲檢查狀態更新
+                            setTimeout(() => {
+                                updateFullscreenButton();
+                                isTogglingFullscreen = false;
+                            }, 100);
+                        }
+                    } catch (err) {
+                        console.error('進入全螢幕錯誤:', err);
+                        // 如果全螢幕API失敗，至少切換樣式
+                        document.body.classList.add('fullscreen-mode');
+                        updateFullscreenButton();
+                        isTogglingFullscreen = false;
+                    }
+                } else {
+                    // 如果瀏覽器不支持全螢幕API，至少切換樣式
+                    document.body.classList.add('fullscreen-mode');
+                    updateFullscreenButton();
+                    isTogglingFullscreen = false;
                 }
             }
         }
 
         // 更新按鈕文字
         function updateFullscreenButton() {
-            const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement;
+            const isFullscreen = document.fullscreenElement || 
+                                document.webkitFullscreenElement || 
+                                document.msFullscreenElement ||
+                                document.mozFullScreenElement ||
+                                document.body.classList.contains('fullscreen-mode');
+            
             if (isFullscreen) {
                 fullscreenBtn.textContent = '退出全螢幕';
                 document.body.classList.add('fullscreen-mode');
@@ -1575,14 +1686,42 @@
                 fullscreenBtn.textContent = '進入全螢幕';
                 document.body.classList.remove('fullscreen-mode');
             }
+            
+            // 重置切換標誌（延遲一點確保狀態已更新）
+            setTimeout(() => {
+                isTogglingFullscreen = false;
+            }, 50);
         }
 
-        fullscreenBtn.addEventListener('click', toggleFullscreen);
+        // 使用多種事件確保手機上能觸發
+        fullscreenBtn.addEventListener('click', function(e) {
+            toggleFullscreen(e);
+        }, { passive: false });
+        
+        // 手機觸摸事件處理
+        let touchStartTime = 0;
+        fullscreenBtn.addEventListener('touchstart', function(e) {
+            touchStartTime = Date.now();
+        }, { passive: true });
+        
+        fullscreenBtn.addEventListener('touchend', function(e) {
+            // 確保是點擊而不是滑動
+            const touchDuration = Date.now() - touchStartTime;
+            if (touchDuration < 300) { // 300ms內完成視為點擊
+                e.preventDefault();
+                e.stopPropagation();
+                toggleFullscreen(e);
+            }
+        }, { passive: false });
 
         // 監聽全螢幕狀態變化
         document.addEventListener('fullscreenchange', updateFullscreenButton);
         document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
         document.addEventListener('msfullscreenchange', updateFullscreenButton);
+        document.addEventListener('mozfullscreenchange', updateFullscreenButton);
+        
+        // 初始化按鈕狀態
+        updateFullscreenButton();
 
         // 手機滑動功能 - 統一的觸摸變數
         let touchStartX = 0;
