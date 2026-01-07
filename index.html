@@ -789,9 +789,9 @@
         </div>
 
         <div class="flashcard">
-            <button id="prevBtn" class="nav-btn nav-btn-left">◀</button>
-            <button id="nextBtn" class="nav-btn nav-btn-right">▶</button>
-            <div class="word" id="wordDisplay">姓名</div>
+            <button id="prevBtn" class="nav-btn nav-btn-left" aria-label="上一個">◀</button>
+            <button id="nextBtn" class="nav-btn nav-btn-right" aria-label="下一個">▶</button>
+            <div class="word" id="wordDisplay" role="status" aria-live="polite">姓名</div>
             <button id="addToReviewBtn" class="add-btn">+</button>
         </div>
 
@@ -800,7 +800,7 @@
         </div>
 
         <div class="fullscreen-controls">
-            <button id="fullscreenBtn" class="nav-btn">進入全螢幕</button>
+            <button id="fullscreenBtn" class="nav-btn" aria-label="全螢幕切換">進入全螢幕</button>
         </div>
     </div>
 
@@ -1366,41 +1366,9 @@
 
         // 鍵盤快捷鍵
         document.addEventListener('keydown', (e) => {
-            // 先檢查是否為需要禁用的快捷鍵
-            if (e.key === 'F12' || e.keyCode === 123) {
-                e.preventDefault();
-                return false;
-            }
-            if (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) {
-                e.preventDefault();
-                return false;
-            }
-            if (e.ctrlKey && (e.key === 'U' || e.key === 'S')) {
-                e.preventDefault();
-                return false;
-            }
-            
-            // ESC鍵處理：在全螢幕模式下阻止默認行為，使用我們的退出函數
             if (e.key === 'Escape') {
-                const isFullscreen = document.fullscreenElement || 
-                                    document.webkitFullscreenElement || 
-                                    document.msFullscreenElement || 
-                                    document.mozFullScreenElement ||
-                                    document.body.classList.contains('fullscreen-mode');
-                
-                if (isFullscreen) {
-                    // 在全螢幕模式下，阻止ESC鍵的默認行為，使用我們的退出函數
-                    e.preventDefault();
-                    e.stopPropagation();
-                    toggleFullscreen(e);
-                    return false;
-                } else {
-                    // 不在全螢幕模式下，關閉懸浮窗
-                    unitModal.classList.remove('active');
-                }
+                unitModal.classList.remove('active');
             }
-            
-            // 允許的快捷鍵
             if (e.key === 'ArrowLeft') prevBtn.click();
             else if (e.key === 'ArrowRight') nextBtn.click();
             else if (e.key.toLowerCase() === 'c' && !e.ctrlKey && !e.shiftKey) chineseBtn.click();
@@ -1763,41 +1731,7 @@
         }
 
 
-        // 禁用右鍵選單
-        document.addEventListener('contextmenu', function(e) {
-            e.preventDefault();
-            return false;
-        });
 
-        // 禁用文字選擇（額外保護）
-        document.addEventListener('selectstart', function(e) {
-            e.preventDefault();
-            return false;
-        });
-
-        // 禁用拖拽
-        document.addEventListener('dragstart', function(e) {
-            e.preventDefault();
-            return false;
-        });
-
-        // 禁用複製
-        document.addEventListener('copy', function(e) {
-            e.preventDefault();
-            return false;
-        });
-
-        // 禁用剪下
-        document.addEventListener('cut', function(e) {
-            e.preventDefault();
-            return false;
-        });
-
-        // 禁用貼上
-        document.addEventListener('paste', function(e) {
-            e.preventDefault();
-            return false;
-        });
 
         // 禁用頁面滾動（手機端）- 完全阻止上下滾動
         // 使用全局的 touchStartX 和 touchStartY 變數（已在上面定義）
@@ -1846,52 +1780,15 @@
             e.preventDefault();
         }, { passive: false });
 
-        // 禁用頁面滾動（桌面端）- 完全阻止，但允許懸浮窗滾動
-        document.addEventListener('wheel', function(e) {
-            // 檢查是否在懸浮窗內部
-            const modalBody = document.querySelector('.modal-body');
-            if (modalBody && modalBody.contains(e.target)) {
-                return; // 允許懸浮窗內部滾動
-            }
-            e.preventDefault();
-            e.stopPropagation();
-            return false;
-        }, { passive: false });
 
-        // 禁用頁面滾動（滾動條）
-        document.addEventListener('scroll', function(e) {
-            window.scrollTo(0, 0);
-            e.preventDefault();
-        }, { passive: false });
 
-        // 鎖定滾動位置
-        window.addEventListener('scroll', function() {
-            window.scrollTo(0, 0);
-        });
 
-        // 在頁面加載時鎖定滾動
-        window.addEventListener('load', function() {
-            window.scrollTo(0, 0);
-            document.body.scrollTop = 0;
-            document.documentElement.scrollTop = 0;
-        });
 
-        // 禁用頁面滾動（鍵盤）- 只阻止上下滾動相關的按鍵
-        document.addEventListener('keydown', function(e) {
-            // 禁止上下方向鍵滾動頁面（左右方向鍵已用於切換卡片，不阻止）
-            if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-                // 只有在不是用於切換卡片時才阻止
-                if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') {
-                    e.preventDefault();
-                }
-            }
-            // 禁止空格鍵和Page Up/Down滾動頁面
-            if (e.key === ' ' || e.key === 'PageUp' || e.key === 'PageDown') {
-                if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') {
-                    e.preventDefault();
-                }
-            }
-        }, true);
+
+
+
+
+
 
         // 防止雙擊縮放
         let lastTouchEnd = 0;
@@ -1903,22 +1800,7 @@
             lastTouchEnd = now;
         }, false);
 
-        // 持續鎖定滾動位置（優化性能，使用 requestAnimationFrame）
-        function lockScroll() {
-            if (window.scrollY !== 0 || window.scrollX !== 0) {
-                window.scrollTo(0, 0);
-            }
-            if (document.body.scrollTop !== 0 || document.body.scrollLeft !== 0) {
-                document.body.scrollTop = 0;
-                document.body.scrollLeft = 0;
-            }
-            if (document.documentElement.scrollTop !== 0 || document.documentElement.scrollLeft !== 0) {
-                document.documentElement.scrollTop = 0;
-                document.documentElement.scrollLeft = 0;
-            }
-            requestAnimationFrame(lockScroll);
-        }
-        requestAnimationFrame(lockScroll);
+
 
         // 在DOMContentLoaded時立即鎖定
         document.addEventListener('DOMContentLoaded', function() {
