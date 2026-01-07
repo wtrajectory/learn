@@ -314,12 +314,13 @@
             color: white;
             border: none;
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            min-width: 40px;
-            min-height: 40px;
-            max-width: 40px;
-            max-height: 40px;
+            width: 40px !important;
+            height: 40px !important;
+            min-width: 40px !important;
+            min-height: 40px !important;
+            max-width: 40px !important;
+            max-height: 40px !important;
+            aspect-ratio: 1 / 1;
             font-size: 20px;
             font-weight: bold;
             cursor: pointer;
@@ -330,12 +331,15 @@
             -webkit-transform: translateY(-50%) translateZ(0);
             position: absolute;
             top: 50%;
-            display: flex;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
             box-sizing: border-box;
             padding: 0;
+            margin: 0;
+            line-height: 1;
+            overflow: hidden;
         }
 
         .nav-btn:hover {
@@ -356,6 +360,21 @@
 
         .nav-btn-right {
             right: 8.33%;
+        }
+
+        /* 確保顯示框內的導航按鈕始終保持正圓形 */
+        .flashcard .nav-btn {
+            width: 40px !important;
+            height: 40px !important;
+            min-width: 40px !important;
+            min-height: 40px !important;
+            max-width: 40px !important;
+            max-height: 40px !important;
+            aspect-ratio: 1 / 1 !important;
+            padding: 0 !important;
+            border-radius: 50% !important;
+            display: inline-flex !important;
+            flex-shrink: 0 !important;
         }
 
         /* 懸浮窗 - 單元詞彙預覽 */
@@ -524,9 +543,54 @@
             }
             
             .nav-btn {
-                padding: 12px 28px;
-                font-size: 16px;
-                min-width: 120px;
+                width: 40px !important;
+                height: 40px !important;
+                min-width: 40px !important;
+                min-height: 40px !important;
+                max-width: 40px !important;
+                max-height: 40px !important;
+                padding: 0 !important;
+                font-size: 20px;
+                aspect-ratio: 1 / 1 !important;
+                border-radius: 50% !important;
+                display: inline-flex !important;
+            }
+            
+            /* 確保顯示框內的導航按鈕在手機上保持正圓形 */
+            .flashcard .nav-btn {
+                width: 40px !important;
+                height: 40px !important;
+                min-width: 40px !important;
+                min-height: 40px !important;
+                max-width: 40px !important;
+                max-height: 40px !important;
+                aspect-ratio: 1 / 1 !important;
+                padding: 0 !important;
+                border-radius: 50% !important;
+                display: inline-flex !important;
+                flex-shrink: 0 !important;
+            }
+            
+            /* 確保全螢幕控制按鈕在手機上保持長條樣式 */
+            .fullscreen-controls .nav-btn {
+                position: static !important;
+                top: auto !important;
+                left: auto !important;
+                right: auto !important;
+                border-radius: 28px !important;
+                width: auto !important;
+                height: auto !important;
+                min-width: 120px !important;
+                min-height: auto !important;
+                max-width: none !important;
+                max-height: none !important;
+                aspect-ratio: auto !important;
+                padding: 12px 28px !important;
+                font-size: 16px !important;
+                transform: translateZ(0) !important;
+                -webkit-transform: translateZ(0) !important;
+                display: inline-block !important;
+                flex-shrink: 1 !important;
             }
             
             .unit-btn {
@@ -604,20 +668,26 @@
 
         /* 全螢幕控制按鈕維持原本長條樣式，不受閃卡內導航圓鈕影響 */
         .fullscreen-controls .nav-btn {
-            position: static;
-            top: auto;
-            border-radius: 28px;
-            width: auto;
-            height: auto;
-            padding: 14px 36px;
-            font-size: 18px;
-            transform: translateZ(0);
-            -webkit-transform: translateZ(0);
+            position: static !important;
+            top: auto !important;
+            left: auto !important;
+            right: auto !important;
+            border-radius: 28px !important;
+            width: auto !important;
+            height: auto !important;
+            min-width: 140px !important;
+            min-height: auto !important;
+            max-width: none !important;
+            max-height: none !important;
+            aspect-ratio: auto !important;
+            padding: 14px 36px !important;
+            font-size: 18px !important;
+            transform: translateZ(0) !important;
+            -webkit-transform: translateZ(0) !important;
+            display: inline-block !important;
+            flex-shrink: 1 !important;
         }
 
-        #exitFullscreenBtn {
-            display: none;
-        }
 
         .fullscreen-mode .control-panel,
         .fullscreen-mode .unit-panel,
@@ -725,8 +795,7 @@
         </div>
 
         <div class="fullscreen-controls">
-            <button id="enterFullscreenBtn" class="nav-btn">進入全螢幕</button>
-            <button id="exitFullscreenBtn" class="nav-btn">退出全螢幕</button>
+            <button id="fullscreenBtn" class="nav-btn">進入全螢幕</button>
         </div>
     </div>
 
@@ -924,8 +993,7 @@
         const modalTitle = document.getElementById('modalTitle');
         const chineseList = document.getElementById('chineseList');
         const englishList = document.getElementById('englishList');
-        const enterFullscreenBtn = document.getElementById('enterFullscreenBtn');
-        const exitFullscreenBtn = document.getElementById('exitFullscreenBtn');
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
         const addToReviewBtn = document.getElementById('addToReviewBtn');
         const clearReviewBtn = document.getElementById('clearReviewBtn');
         const reviewClearBtnContainer = document.getElementById('reviewClearBtnContainer');
@@ -1472,22 +1540,11 @@
         }
 
         // 全螢幕模式切換
-        function enterFullscreen() {
-            const docEl = document.documentElement;
-            if (docEl.requestFullscreen) {
-                docEl.requestFullscreen();
-            } else if (docEl.webkitRequestFullscreen) {
-                docEl.webkitRequestFullscreen();
-            } else if (docEl.msRequestFullscreen) {
-                docEl.msRequestFullscreen();
-            }
-            document.body.classList.add('fullscreen-mode');
-            enterFullscreenBtn.style.display = 'none';
-            exitFullscreenBtn.style.display = 'inline-block';
-        }
-
-        function exitFullscreen() {
-            if (document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement) {
+        function toggleFullscreen() {
+            const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement;
+            
+            if (isFullscreen) {
+                // 退出全螢幕
                 if (document.exitFullscreen) {
                     document.exitFullscreen();
                 } else if (document.webkitExitFullscreen) {
@@ -1495,22 +1552,37 @@
                 } else if (document.msExitFullscreen) {
                     document.msExitFullscreen();
                 }
+            } else {
+                // 進入全螢幕
+                const docEl = document.documentElement;
+                if (docEl.requestFullscreen) {
+                    docEl.requestFullscreen();
+                } else if (docEl.webkitRequestFullscreen) {
+                    docEl.webkitRequestFullscreen();
+                } else if (docEl.msRequestFullscreen) {
+                    docEl.msRequestFullscreen();
+                }
             }
-            document.body.classList.remove('fullscreen-mode');
-            enterFullscreenBtn.style.display = 'inline-block';
-            exitFullscreenBtn.style.display = 'none';
         }
 
-        enterFullscreenBtn.addEventListener('click', enterFullscreen);
-        exitFullscreenBtn.addEventListener('click', exitFullscreen);
-
-        document.addEventListener('fullscreenchange', () => {
-            if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
+        // 更新按鈕文字
+        function updateFullscreenButton() {
+            const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement;
+            if (isFullscreen) {
+                fullscreenBtn.textContent = '退出全螢幕';
+                document.body.classList.add('fullscreen-mode');
+            } else {
+                fullscreenBtn.textContent = '進入全螢幕';
                 document.body.classList.remove('fullscreen-mode');
-                enterFullscreenBtn.style.display = 'inline-block';
-                exitFullscreenBtn.style.display = 'none';
             }
-        });
+        }
+
+        fullscreenBtn.addEventListener('click', toggleFullscreen);
+
+        // 監聽全螢幕狀態變化
+        document.addEventListener('fullscreenchange', updateFullscreenButton);
+        document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
+        document.addEventListener('msfullscreenchange', updateFullscreenButton);
 
         // 手機滑動功能 - 統一的觸摸變數
         let touchStartX = 0;
