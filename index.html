@@ -327,10 +327,10 @@
             transition: all 0.15s ease-out;
             box-shadow: 0 5px 15px rgba(255, 87, 34, 0.4);
             will-change: transform;
-            transform: translateY(-50%) translateZ(0);
-            -webkit-transform: translateY(-50%) translateZ(0);
+            transform: translateX(-50%) translateZ(0);
+            -webkit-transform: translateX(-50%) translateZ(0);
             position: absolute;
-            top: 50%;
+            bottom: 20px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -343,23 +343,25 @@
         }
 
         .nav-btn:hover {
-            transform: translateY(-50%) scale(1.1);
+            transform: translateX(-50%) scale(1.1);
             box-shadow: 0 8px 20px rgba(255, 87, 34, 0.6);
         }
 
         .nav-btn:disabled {
             background: #BDBDBD;
             cursor: not-allowed;
-            transform: translateY(-50%);
+            transform: translateX(-50%);
             box-shadow: none;
         }
 
         .nav-btn-left {
-            left: 8.33%;
+            left: 25%;
+            right: auto;
         }
 
         .nav-btn-right {
-            right: 8.33%;
+            left: 75%;
+            right: auto;
         }
 
         /* 確保顯示框內的導航按鈕始終保持正圓形 */
@@ -1198,29 +1200,9 @@
                     return;
                 }
                 
-                // 1. 計算可用寬度：扣除左右按鈕的空間
+                // 1. 計算可用寬度：按鈕已移至底部，使用完整寬度
                 const flashcardWidth = flashcard.offsetWidth;
-                let availableWidth = flashcardWidth - 60; // 基礎左右 padding
-                
-                const prevBtn = document.getElementById('prevBtn');
-                
-                // 檢測按鈕是否顯示 (假設 prev 和 next 狀態一致)
-                if (prevBtn && getComputedStyle(prevBtn).display !== 'none') {
-                    // 按鈕位置：left 8.33% + width 40px + 安全距離 15px
-                    // 兩側都扣除
-                    const btnPositionPercent = 0.0833;
-                    const btnWidth = 40;
-                    const safeGap = 15;
-                    
-                    // 單側被佔用的寬度
-                    const sideOccupied = (flashcardWidth * btnPositionPercent) + btnWidth + safeGap;
-                    
-                    // 計算剩餘的中間可用寬度
-                    const widthWithButtons = flashcardWidth - (sideOccupied * 2);
-                    
-                    // 取較小值作為最終可用寬度
-                    availableWidth = Math.min(availableWidth, widthWithButtons);
-                }
+                let availableWidth = flashcardWidth - 80; // 基礎左右 padding (40px * 2)
                 
                 if (availableWidth < 100) availableWidth = 100; // 防止過窄
                 
