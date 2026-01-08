@@ -1198,40 +1198,60 @@
                     return;
                 }
                 
-                // 獲取可用寬度
+                // 1. 計算可用寬度：扣除左右按鈕的空間
                 const flashcardWidth = flashcard.offsetWidth;
-                const padding = 80;
-                const availableWidth = flashcardWidth - padding;
+                let availableWidth = flashcardWidth - 60; // 基礎左右 padding
                 
-                if (availableWidth <= 0) return;
+                const prevBtn = document.getElementById('prevBtn');
                 
-                // 使用簡化的計算方式
-                const baseFontSize = isChinese ? 72 : 64;
-                const textLength = wordElement.textContent.length;
-                
-                // 根據文字長度和可用寬度計算合適的字體大小
-                // 中文字符約佔字體大小的60%，英文字符約佔50%
-                const charWidthRatio = isChinese ? 0.6 : 0.5;
-                const estimatedWidth = textLength * (baseFontSize * charWidthRatio);
-                
-                let newSize;
-                if (estimatedWidth > availableWidth) {
-                    // 需要縮小
-                    newSize = Math.max(20, Math.floor(availableWidth / (textLength * charWidthRatio)));
-                } else {
-                    // 可以使用基礎大小或適當放大
-                    const maxSize = baseFontSize;
-                    newSize = Math.min(maxSize, Math.floor(availableWidth / (textLength * charWidthRatio)));
-                    // 如果計算出的字體太大，使用基礎大小
-                    if (newSize > maxSize) {
-                        newSize = maxSize;
-                    }
+                // 檢測按鈕是否顯示 (假設 prev 和 next 狀態一致)
+                if (prevBtn && getComputedStyle(prevBtn).display !== 'none') {
+                    // 按鈕位置：left 8.33% + width 40px + 安全距離 15px
+                    // 兩側都扣除
+                    const btnPositionPercent = 0.0833;
+                    const btnWidth = 40;
+                    const safeGap = 15;
+                    
+                    // 單側被佔用的寬度
+                    const sideOccupied = (flashcardWidth * btnPositionPercent) + btnWidth + safeGap;
+                    
+                    // 計算剩餘的中間可用寬度
+                    const widthWithButtons = flashcardWidth - (sideOccupied * 2);
+                    
+                    // 取較小值作為最終可用寬度
+                    availableWidth = Math.min(availableWidth, widthWithButtons);
                 }
                 
-                // 立即應用字體大小
-                wordElement.style.fontSize = newSize + 'px';
+                if (availableWidth < 100) availableWidth = 100; // 防止過窄
+                
+                // 2. 初始字體大小設定
+                const maxFontSize = isChinese ? 72 : 64;
+                let currentSize = maxFontSize;
+                
+                // 先設置為最大字體
+                wordElement.style.fontSize = currentSize + 'px';
+                wordElement.style.whiteSpace = 'nowrap';
+                
+                // 3. 快速估算與調整 (避免過多次循環)
+                // 獲取實際渲染寬度
+                let currentWidth = wordElement.scrollWidth;
+                
+                // 如果實際寬度大於可用寬度，按比例縮小
+                if (currentWidth > availableWidth) {
+                    // 計算縮放比例，並稍微多縮一點 (0.95) 確保安全
+                    const ratio = (availableWidth / currentWidth) * 0.95;
+                    currentSize = Math.floor(currentSize * ratio);
+                    currentSize = Math.max(currentSize, 16); // 最小字體限制
+                    wordElement.style.fontSize = currentSize + 'px';
+                }
+                
+                // 4. 精確微調：如果還是超出，逐步縮小 (處理邊界情況)
+                while (wordElement.scrollWidth > availableWidth && currentSize > 16) {
+                    currentSize -= 2;
+                    wordElement.style.fontSize = currentSize + 'px';
+                }
+                
             } catch (e) {
-                // 忽略錯誤，不影響主功能
                 console.error('Font size adjustment error:', e);
             }
         }
