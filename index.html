@@ -1308,7 +1308,6 @@
             e.preventDefault();
             e.stopPropagation();
             
-            // 防止重複點擊
             if (isUpdating || buttonClickTimer) return;
             
             const currentVocab = getCurrentVocabulary();
@@ -1316,22 +1315,20 @@
             
             isUpdating = true;
             
-            // 隨機跳轉到另一個單字（避免重複）
             let newIndex;
             if (displayOrder.length <= 1) {
                 newIndex = 0;
-            } else {
+            } else if (isRandomMode) {
                 do {
                     newIndex = Math.floor(Math.random() * displayOrder.length);
                 } while (newIndex === currentIndex && displayOrder.length > 1);
+            } else {
+                newIndex = (currentIndex - 1 + displayOrder.length) % displayOrder.length;
             }
             
             currentIndex = newIndex;
-            
-            // 立即更新顯示
             updateFlashcardSync();
             
-            // 防抖，200ms後允許再次點擊
             buttonClickTimer = setTimeout(() => {
                 buttonClickTimer = null;
                 isUpdating = false;
@@ -1344,7 +1341,6 @@
             e.preventDefault();
             e.stopPropagation();
             
-            // 防止重複點擊
             if (isUpdating || buttonClickTimer) return;
             
             const currentVocab = getCurrentVocabulary();
@@ -1352,22 +1348,20 @@
             
             isUpdating = true;
             
-            // 隨機跳轉到另一個單字（避免重複）
             let newIndex;
             if (displayOrder.length <= 1) {
                 newIndex = 0;
-            } else {
+            } else if (isRandomMode) {
                 do {
                     newIndex = Math.floor(Math.random() * displayOrder.length);
                 } while (newIndex === currentIndex && displayOrder.length > 1);
+            } else {
+                newIndex = (currentIndex + 1) % displayOrder.length;
             }
             
             currentIndex = newIndex;
-            
-            // 立即更新顯示
             updateFlashcardSync();
             
-            // 防抖，200ms後允許再次點擊
             buttonClickTimer = setTimeout(() => {
                 buttonClickTimer = null;
                 isUpdating = false;
