@@ -753,7 +753,6 @@
     </style>
 </head>
 
-<!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-EMLXVK1251"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -764,7 +763,6 @@
 </script>
 
 <body>
-    <!-- 單元選擇面板 -->
     <div class="unit-panel">
         <div class="unit-item">
             <div class="filter-circle" data-filter-unit="1"></div>
@@ -808,7 +806,7 @@
         </div>
 
         <div style="text-align: center;">
-            <div class="unit-info" id="unitInfo">單元一：健康飲食+農曆新年</div>
+            <div class="unit-info" id="unitInfo">單元一：預備週</div>
         </div>
 
         <div class="fullscreen-controls">
@@ -816,11 +814,10 @@
         </div>
     </div>
 
-    <!-- 單元詞彙懸浮窗 -->
     <div class="modal-overlay" id="unitModal">
         <div class="modal-content">
             <div class="modal-header">
-                <span id="modalTitle">單元一：健康飲食+農曆新年</span>
+                <span id="modalTitle">單元一：預備週</span>
                 <button class="close-modal" id="closeModal">&times;</button>
             </div>
             <div class="modal-body">
@@ -828,14 +825,12 @@
                     <div class="vocab-column">
                         <h3>中文詞彙</h3>
                         <ul class="vocab-list" id="chineseList">
-                            <!-- 動態生成 -->
-                        </ul>
+                            </ul>
                     </div>
                     <div class="vocab-column">
                         <h3>English Vocabulary</h3>
                         <ul class="vocab-list" id="englishList">
-                            <!-- 動態生成 -->
-                        </ul>
+                            </ul>
                     </div>
                 </div>
                 <div id="reviewClearBtnContainer" style="display: none; text-align: center;">
@@ -887,7 +882,7 @@
             { english: "jam", unit: 1 },
             { english: "butter", unit: 1 },
             { english: "cheese", unit: 1 },
-            { english: "meat", unit: 1 },
+            { english: "meeat", unit: 1 },
             
             // 單元二：我愛整潔+春天 (2026年2月25日至3月20日)
             { chinese: "病菌", unit: 2 },
@@ -1034,7 +1029,14 @@
                 }
             }
             
-            return sourceVocab;
+            // 【重要修正】過濾掉當前語言沒有內容的詞彙
+            return sourceVocab.filter(item => {
+                if (isChinese) {
+                    return item.chinese && item.chinese.trim() !== '';
+                } else {
+                    return item.english && item.english.trim() !== '';
+                }
+            });
         }
 
         // 洗牌函數
@@ -1073,47 +1075,8 @@
                 return;
             }
             
-            // 安全取值：若當前模式無對應語言，則隨機找一個有效的
-            let displayText = '';
-            let foundData = wordData;
-            
-            if (isChinese) {
-                displayText = wordData.chinese ?? '';
-                if (displayText === '') {
-                    // 隨機找一個有中文的
-                    const validIndices = [];
-                    for (let i = 0; i < currentVocab.length; i++) {
-                        if (currentVocab[i].chinese) {
-                            validIndices.push(i);
-                        }
-                    }
-                    if (validIndices.length > 0) {
-                        const randomValidIndex = validIndices[Math.floor(Math.random() * validIndices.length)];
-                        currentIndex = displayOrder.indexOf(randomValidIndex);
-                        if (currentIndex === -1) currentIndex = 0;
-                        foundData = currentVocab[randomValidIndex];
-                        displayText = foundData.chinese;
-                    }
-                }
-            } else {
-                displayText = wordData.english ?? '';
-                if (displayText === '') {
-                    // 隨機找一個有英文的
-                    const validIndices = [];
-                    for (let i = 0; i < currentVocab.length; i++) {
-                        if (currentVocab[i].english) {
-                            validIndices.push(i);
-                        }
-                    }
-                    if (validIndices.length > 0) {
-                        const randomValidIndex = validIndices[Math.floor(Math.random() * validIndices.length)];
-                        currentIndex = displayOrder.indexOf(randomValidIndex);
-                        if (currentIndex === -1) currentIndex = 0;
-                        foundData = currentVocab[randomValidIndex];
-                        displayText = foundData.english;
-                    }
-                }
-            }
+            // 【重要修正】直接取值，因為 getCurrentVocabulary() 已經過濾過空值了
+            let displayText = isChinese ? wordData.chinese : wordData.english;
             
             // 先設置為調整狀態（降低透明度）
             wordDisplay.className = `word adjusting ${isChinese ? '' : 'english'}`;
@@ -1125,10 +1088,10 @@
             adjustFontSizeSync();
             
             // 顯示單元標籤
-            if (foundData.unit === 'review') {
+            if (wordData.unit === 'review') {
                 unitInfo.textContent = '重點複習';
             } else {
-                unitInfo.textContent = `單元${foundData.unit}：${unitThemes[foundData.unit]}`;
+                unitInfo.textContent = `單元${wordData.unit}：${unitThemes[wordData.unit]}`;
             }
             
             // 移除按鈕禁用
@@ -1141,7 +1104,7 @@
             });
         }
 
-        // 更新閃卡內容（原有版本，用於其他情況）
+        // 更新閃卡內容
         function updateFlashcard() {
             updateFlashcardSync();
         }
@@ -1216,18 +1179,24 @@
         initDisplayOrder();
         updateFlashcard();
 
-        // 事件監聽器（原有功能）
+        // 事件監聽器
         chineseBtn.addEventListener('click', () => {
+            if (isChinese) return; // 避免重複點擊
             isChinese = true;
             chineseBtn.classList.add('active');
             englishBtn.classList.remove('active');
+            currentIndex = 0; // 【重要修正】切換語言時必須重置索引並重新生成順序
+            initDisplayOrder();
             updateFlashcard();
         });
 
         englishBtn.addEventListener('click', () => {
+            if (!isChinese) return; // 避免重複點擊
             isChinese = false;
             englishBtn.classList.add('active');
             chineseBtn.classList.remove('active');
+            currentIndex = 0; // 【重要修正】切換語言時必須重置索引並重新生成順序
+            initDisplayOrder();
             updateFlashcard();
         });
 
@@ -1420,7 +1389,7 @@
             }
         });
 
-        // 顯示單元詞彙懸浮窗（關鍵：只顯示存在的語言項目）
+        // 顯示單元詞彙懸浮窗
         function showUnitVocabulary(unitNum) {
             // 篩選該單元詞彙
             const unitWords = vocabulary.filter(item => item.unit === unitNum);
@@ -1650,15 +1619,15 @@
         let touchStartX = 0;
         let touchStartY = 0;
         let touchEndX = 0;
-        const flashcard = document.querySelector('.flashcard');
+        const flashcardContainer = document.querySelector('.flashcard');
 
         // 處理閃卡區域的觸摸（用於切換卡片）
-        flashcard.addEventListener('touchstart', (e) => {
+        flashcardContainer.addEventListener('touchstart', (e) => {
             touchStartX = e.changedTouches[0].screenX;
             touchStartY = e.changedTouches[0].screenY;
         }, { passive: true });
 
-        flashcard.addEventListener('touchend', (e) => {
+        flashcardContainer.addEventListener('touchend', (e) => {
             touchEndX = e.changedTouches[0].screenX;
             handleSwipe();
         }, { passive: true });
@@ -1685,16 +1654,11 @@
             }
         }
 
-
-
-
         // 禁用頁面滾動（手機端）- 完全阻止上下滾動
-        // 使用全局的 touchStartX 和 touchStartY 變數（已在上面定義）
-        
         document.addEventListener('touchstart', function(e) {
             // 如果不是閃卡區域，更新觸摸起始位置
-            const flashcard = document.querySelector('.flashcard');
-            if (!flashcard || !flashcard.contains(e.target)) {
+            const flashcardElem = document.querySelector('.flashcard');
+            if (!flashcardElem || !flashcardElem.contains(e.target)) {
                 touchStartY = e.touches[0].clientY;
                 touchStartX = e.touches[0].clientX;
             }
@@ -1713,10 +1677,10 @@
                 return; // 允許懸浮窗內部滾動
             }
             
-            const flashcard = document.querySelector('.flashcard');
+            const flashcardElem = document.querySelector('.flashcard');
             
             // 如果是閃卡區域，允許水平滑動（用於切換卡片）
-            if (flashcard && flashcard.contains(e.target)) {
+            if (flashcardElem && flashcardElem.contains(e.target)) {
                 const touchCurrentY = e.touches[0].clientY;
                 const touchCurrentX = e.touches[0].clientX;
                 const diffY = Math.abs(touchCurrentY - touchStartY);
@@ -1735,16 +1699,6 @@
             e.preventDefault();
         }, { passive: false });
 
-
-
-
-
-
-
-
-
-
-
         // 防止雙擊縮放
         let lastTouchEnd = 0;
         document.addEventListener('touchend', function(e) {
@@ -1754,8 +1708,6 @@
             }
             lastTouchEnd = now;
         }, false);
-
-
 
         // 在DOMContentLoaded時立即鎖定
         document.addEventListener('DOMContentLoaded', function() {
