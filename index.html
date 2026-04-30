@@ -978,11 +978,13 @@
             
             displayOrder = Array.from({length: sourceVocab.length}, (_, i) => i);
             if (isRandomMode) {
+                // 隨機模式：每個單詞在每一輪中出現兩次
+                displayOrder = [...displayOrder, ...displayOrder];
                 shuffleArray(displayOrder);
             }
             
             // 確保索引不超出範圍
-            if (currentIndex >= sourceVocab.length) {
+            if (currentIndex >= displayOrder.length) {
                 currentIndex = 0;
             }
         }
@@ -1236,10 +1238,6 @@
             let newIndex;
             if (displayOrder.length <= 1) {
                 newIndex = 0;
-            } else if (isRandomMode) {
-                do {
-                    newIndex = Math.floor(Math.random() * displayOrder.length);
-                } while (newIndex === currentIndex && displayOrder.length > 1);
             } else {
                 newIndex = (currentIndex - 1 + displayOrder.length) % displayOrder.length;
             }
@@ -1269,12 +1267,12 @@
             let newIndex;
             if (displayOrder.length <= 1) {
                 newIndex = 0;
-            } else if (isRandomMode) {
-                do {
-                    newIndex = Math.floor(Math.random() * displayOrder.length);
-                } while (newIndex === currentIndex && displayOrder.length > 1);
             } else {
                 newIndex = (currentIndex + 1) % displayOrder.length;
+                // 隨機模式走完整輪後重洗，確保下一輪仍是每字兩次但順序不同
+                if (isRandomMode && newIndex === 0) {
+                    shuffleArray(displayOrder);
+                }
             }
             
             currentIndex = newIndex;
