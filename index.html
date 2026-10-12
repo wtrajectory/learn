@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>K2_1</title>
+    <title>K3</title>
+    <!-- 分頁圖示：一本打開的書 -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='14'%20fill='%234ECDC4'/%3E%3Cpath%20d='M12%2014C19%2014%2027%2016%2032%2020C37%2016%2045%2014%2052%2014L52%2048C45%2048%2037%2050%2032%2054C27%2050%2019%2048%2012%2048Z'%20fill='%23ffffff'/%3E%3Cpath%20d='M32%2020L32%2054'%20stroke='%234ECDC4'%20stroke-width='3'%20stroke-linecap='round'/%3E%3Cpath%20d='M20%2022C23%2022%2027%2023%2030%2025'%20stroke='%234ECDC4'%20stroke-width='2'%20stroke-linecap='round'%20fill='none'%20opacity='0.55'/%3E%3Cpath%20d='M20%2031C23%2031%2027%2032%2030%2034'%20stroke='%234ECDC4'%20stroke-width='2'%20stroke-linecap='round'%20fill='none'%20opacity='0.55'/%3E%3Cpath%20d='M44%2022C41%2022%2037%2023%2034%2025'%20stroke='%234ECDC4'%20stroke-width='2'%20stroke-linecap='round'%20fill='none'%20opacity='0.55'/%3E%3Cpath%20d='M44%2031C41%2031%2037%2032%2034%2034'%20stroke='%234ECDC4'%20stroke-width='2'%20stroke-linecap='round'%20fill='none'%20opacity='0.55'/%3E%3C/svg%3E">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='14'%20fill='%234ECDC4'/%3E%3Cpath%20d='M12%2014C19%2014%2027%2016%2032%2020C37%2016%2045%2014%2052%2014L52%2048C45%2048%2037%2050%2032%2054C27%2050%2019%2048%2012%2048Z'%20fill='%23ffffff'/%3E%3Cpath%20d='M32%2020L32%2054'%20stroke='%234ECDC4'%20stroke-width='3'%20stroke-linecap='round'/%3E%3C/svg%3E">
     <style>
         * {
             margin: 0;
@@ -70,7 +73,11 @@
             transform: translateX(-50%);
             display: flex;
             flex-direction: row;
-            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            max-width: calc(100vw - 24px);
             z-index: 20;
         }
 
@@ -103,6 +110,10 @@
         .unit-btn.unit2 { background: #4ECDC4; color: white; }
         .unit-btn.unit3 { background: #45B7D1; color: white; }
         .unit-btn.unit4 { background: #96CEB4; color: white; }
+        .unit-btn.unit5 { background: #F9A825; color: white; }
+        .unit-btn.unit6 { background: #AB47BC; color: white; }
+        .unit-btn.unit7 { background: #EF6C00; color: white; }
+        .unit-btn.unit8 { background: #5C6BC0; color: white; }
         .unit-btn.review { background: #FFD700; color: #333; }
 
         /* 筛选圆框 */
@@ -131,6 +142,25 @@
             color: white;
             font-size: 24px;
             font-weight: bold;
+        }
+
+        /* 尚無詞彙的單元：篩選圓框反白並停用勾選 */
+        .filter-circle.disabled {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.3);
+            cursor: not-allowed;
+            opacity: 0.5;
+            box-shadow: none;
+        }
+
+        .filter-circle.disabled:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        /* 避免停用狀態被誤加勾號 */
+        .filter-circle.disabled::after {
+            content: none;
         }
 
         /* 单元按钮容器 */
@@ -193,11 +223,12 @@
         .flashcard {
             background: white;
             border-radius: 24px;
-            padding: 70px 40px;
+            padding: 60px 40px;
             margin: 0 auto 30px;
             box-shadow: 0 12px 35px rgba(0,0,0,0.25);
             position: relative;
-            min-height: 240px;
+            /* 卡片高度隨視窗放大：字級可撐到的高度上限即由此決定 */
+            height: clamp(200px, 42vh, 420px);
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -218,7 +249,7 @@
             font-weight: bold;
             color: #2C3E50;
             margin-bottom: 25px;
-            line-height: 1.2;
+            line-height: 1; /* 行高＝字級，方便以高度反推最大字級 */
             font-family: 'Microsoft JhengHei', 'PingFang SC', 'Hiragino Sans GB', sans-serif;
             will-change: contents;
             transform: translateZ(0);
@@ -531,8 +562,8 @@
             }
             
             .flashcard {
-                padding: 55px 25px;
-                min-height: 220px;
+                padding: 32px 18px;
+                height: clamp(150px, 36vh, 300px);
             }
 
             .flashcard-container {
@@ -596,15 +627,27 @@
                 flex-shrink: 1 !important;
             }
             
+            /* 底部單元面板：8 個單元需縮小並允許換行 */
+            .unit-panel {
+                gap: 6px;
+                bottom: 10px;
+            }
+
             .unit-btn {
-                width: 45px;
-                height: 45px;
-                font-size: 14px;
+                width: 38px;
+                height: 38px;
+                font-size: 13px;
             }
 
             .filter-circle {
-                width: 35px;
-                height: 35px;
+                width: 30px;
+                height: 30px;
+                border-width: 2px;
+                margin-bottom: 5px;
+            }
+
+            .filter-circle.active::after {
+                font-size: 18px;
             }
 
             .add-btn {
@@ -627,14 +670,29 @@
                 font-size: clamp(18px, 9vw, 40px);
                 max-width: calc(100vw - 60px);
             }
+
+            .unit-btn {
+                width: 34px;
+                height: 34px;
+                font-size: 12px;
+            }
+
+            .filter-circle {
+                width: 27px;
+                height: 27px;
+            }
+
+            .flashcard {
+                padding: 26px 14px;
+                height: clamp(130px, 30vh, 240px);
+            }
         }
 
         /* 針對螢幕高度做縮放，避免底部圓圈被遮住 */
         @media (max-height: 700px) {
             .flashcard {
                 margin-bottom: 24px;
-                padding: 60px 30px;
-                min-height: 210px;
+                padding: 40px 30px;
             }
 
             .unit-panel {
@@ -739,8 +797,8 @@
             max-width: 1400px;
             margin: 0 auto 35px;
             border-radius: 20px;
-            padding: 100px 60px;
-            min-height: 400px;
+            padding: 50px 60px;
+            height: min(68vh, 760px);
         }
 
         .fullscreen-mode .word {
@@ -781,6 +839,22 @@
             <button class="unit-btn unit4" data-unit="4">4</button>
         </div>
         <div class="unit-item">
+            <div class="filter-circle" data-filter-unit="5"></div>
+            <button class="unit-btn unit5" data-unit="5">5</button>
+        </div>
+        <div class="unit-item">
+            <div class="filter-circle" data-filter-unit="6"></div>
+            <button class="unit-btn unit6" data-unit="6">6</button>
+        </div>
+        <div class="unit-item">
+            <div class="filter-circle" data-filter-unit="7"></div>
+            <button class="unit-btn unit7" data-unit="7">7</button>
+        </div>
+        <div class="unit-item">
+            <div class="filter-circle" data-filter-unit="8"></div>
+            <button class="unit-btn unit8" data-unit="8">8</button>
+        </div>
+        <div class="unit-item">
             <div class="filter-circle" data-filter-unit="review"></div>
             <button class="unit-btn review" data-unit="review">★</button>
         </div>
@@ -801,7 +875,7 @@
         <div class="flashcard">
             <button id="prevBtn" class="nav-btn nav-btn-left" aria-label="上一個">◀</button>
             <button id="nextBtn" class="nav-btn nav-btn-right" aria-label="下一個">▶</button>
-            <div class="word" id="wordDisplay" role="status" aria-live="polite">姓名</div>
+            <div class="word" id="wordDisplay" role="status" aria-live="polite">聽聲音</div>
             <button id="addToReviewBtn" class="add-btn">+</button>
         </div>
 
@@ -843,169 +917,166 @@
     <script>
         // 單元主題對應表
         const unitThemes = {
-            1: "健康飲食+農曆新年",
-            2: "我愛整潔+春天",
-            3: "光影秘密+復活節+清明節+母親節",
-            4: "寵物小主人+專題活動+夏天+兒童節+端午節+父親節(no data)"
+            1: "預備週",
+            2: "我愛中國",
+            3: "健康生活",
+            4: "動物世界",
+            5: "我的社區",
+            6: "小學生活",
+            7: "奇妙的水",
+            8: "方案活動"
         };
 
-        // 詞彙資料（已依您提供內容完整整合，並補回缺失項目）
+        // 詞彙資料
         const vocabulary = [
-            // 單元一：健康飲食+農曆新年 (2026年1月26日至2月13日)
-            { chinese: "牛奶", unit: 1 },
-            { chinese: "魚", unit: 1 },
-            { chinese: "肉", unit: 1 },
-            { chinese: "米飯", unit: 1 },
-            { chinese: "蘋果", unit: 1 },
-            { chinese: "零食", unit: 1 },
-            { chinese: "農夫", unit: 1 },
-            { chinese: "種", unit: 1 },
-            { chinese: "胡蘿蔔", unit: 1 },
-            { chinese: "玉米", unit: 1 },
-            { chinese: "蔬菜", unit: 1 },
-            { chinese: "水果", unit: 1 },
-            { chinese: "麪包", unit: 1 },
-            { chinese: "雞蛋", unit: 1 },
-            { chinese: "果子", unit: 1 },
-            { chinese: "農曆新年", unit: 1 },
-            { english: "bread", unit: 1 },
-            { english: "cookies", unit: 1 },
-            { english: "rice", unit: 1 },
-            { english: "fruits", unit: 1 },
-            { english: "mango", unit: 1 },
-            { english: "strawberry", unit: 1 },
-            { english: "carrot", unit: 1 },
-            { english: "ice cream", unit: 1 },
-            { english: "chocolate", unit: 1 },
-            { english: "juice", unit: 1 },
-            { english: "milk", unit: 1 },
-            { english: "jam", unit: 1 },
-            { english: "butter", unit: 1 },
-            { english: "cheese", unit: 1 },
-            { english: "meat", unit: 1 },
-            
-            // 單元二：我愛整潔+春天 (2026年2月25日至3月20日)
-            { chinese: "病菌", unit: 2 },
-            { chinese: "擦桌子", unit: 2 },
-            { chinese: "擦地板", unit: 2 },
-            { chinese: "收拾玩具", unit: 2 },
-            { chinese: "洗衣服", unit: 2 },
-            { chinese: "收拾地墊", unit: 2 },
-            { chinese: "請", unit: 2 },
-            { chinese: "保持", unit: 2 },
-            { chinese: "澳門", unit: 2 },
-            { chinese: "街道", unit: 2 },
-            { chinese: "清潔", unit: 2 },
-            { chinese: "刷牙", unit: 2 },
-            { chinese: "洗臉", unit: 2 },
-            { chinese: "洗手", unit: 2 },
-            { chinese: "洗澡", unit: 2 },
-            { chinese: "生病", unit: 2 },
-            { chinese: "洗手間", unit: 2 },
-            { chinese: "玩具", unit: 2 },
-            { chinese: "消滅", unit: 2 },
-            { english: "a tooth (teeth)", unit: 2 },
-            { english: "toothbrush", unit: 2 },
-            { english: "toothpaste", unit: 2 },
-            { english: "shower", unit: 2 },
-            { english: "shampoo", unit: 2 },
-            { english: "towel", unit: 2 },
-            { english: "tap", unit: 2 },
-            { english: "head", unit: 2 },
-            { english: "face", unit: 2 },
-            { english: "body", unit: 2 },
-            { english: "brush", unit: 2 },
-            { english: "wash", unit: 2 },
-            { english: "orange", unit: 2 },
-            { english: "purple", unit: 2 },
-            { english: "pink", unit: 2 },
-            { english: "colour", unit: 2 },
-            { english: "favorite", unit: 2 },
-            { english: "orange", unit: 2 },
+            // 單元一：預備週
+            { chinese: "聽聲音", unit: 1 },
+            { chinese: "看書", unit: 1 },
+            { chinese: "拿東西", unit: 1 },
+            { chinese: "走路", unit: 1 },
+            { chinese: "七", unit: 1 },
+            { chinese: "八", unit: 1 },
+            { chinese: "九", unit: 1 },
+            { chinese: "十", unit: 1 },
+            { chinese: "母佑會陳瑞祺永援中學(分校)", unit: 1 },
+            { chinese: "愉快學習", unit: 1 },
+            { chinese: "喜樂事主", unit: 1 },
+            { chinese: "嘴巴", unit: 1 },
+            { chinese: "晴天", unit: 1 },
+            { chinese: "星期", unit: 1 },
+            { chinese: "早安", unit: 1 },
+            { chinese: "午安", unit: 1 },
+            { chinese: "晚安", unit: 1 },
+            { chinese: "再見", unit: 1 },
+            { chinese: "校長", unit: 1 },
+            { chinese: "老師", unit: 1 },
+            { chinese: "修女", unit: 1 },
+            { chinese: "工友", unit: 1 },
+            { chinese: "小朋友", unit: 1 },
+            { chinese: "同學", unit: 1 },
+            { chinese: "護士", unit: 1 },
+            { chinese: "爸爸", unit: 1 },
+            { chinese: "媽媽", unit: 1 },
+            { chinese: "哥哥", unit: 1 },
+            { chinese: "姐姐", unit: 1 },
+            { chinese: "妹妹", unit: 1 },
+            { chinese: "弟弟", unit: 1 },
+            { chinese: "陰天", unit: 1 },
+            { chinese: "雨天", unit: 1 },
+            { chinese: "眼睛", unit: 1 },
+            { chinese: "耳朵", unit: 1 },
+            { chinese: "鼻子", unit: 1 },
+            { chinese: "牙齒", unit: 1 },
+            { chinese: "頭", unit: 1 },
+            { chinese: "手", unit: 1 },
+            { chinese: "腳", unit: 1 },
+            { chinese: "一", unit: 1 },
+            { chinese: "二", unit: 1 },
+            { chinese: "三", unit: 1 },
+            { chinese: "四", unit: 1 },
+            { chinese: "五", unit: 1 },
+            { chinese: "六", unit: 1 },
+            { english: "sad", unit: 1 },
+            { english: "happy", unit: 1 },
+            { english: "angry", unit: 1 },
+            { english: "afraid", unit: 1 },
+            { english: "excited", unit: 1 },
+            { english: "big", unit: 1 },
+            { english: "small", unit: 1 },
+            { english: "tall", unit: 1 },
+            { english: "short", unit: 1 },
+            { english: "sunny", unit: 1 },
+            { english: "rainy", unit: 1 },
+            { english: "cloudy", unit: 1 },
+            { english: "windy", unit: 1 },
+            { english: "white", unit: 1 },
+            { english: "black", unit: 1 },
+            { english: "student", unit: 1 },
+            { english: "feel", unit: 1 },
+            { english: "like", unit: 1 },
+            { english: "red", unit: 1 },
+            { english: "blue", unit: 1 },
+            { english: "green", unit: 1 },
+            { english: "yellow", unit: 1 },
+            { english: "orange", unit: 1 },
+            { english: "purple", unit: 1 },
+            { english: "pink", unit: 1 },
+            { english: "brown", unit: 1 },
+            { english: "cold", unit: 1 },
+            { english: "hot", unit: 1 },
 
+            // 單元二：我愛中國
+            { chinese: "國家", unit: 2 },
+            { chinese: "珠海", unit: 2 },
+            { chinese: "上海", unit: 2 },
+            { chinese: "四川", unit: 2 },
+            { chinese: "家鄉", unit: 2 },
+            { chinese: "美麗", unit: 2 },
+            { chinese: "萬里長城", unit: 2 },
+            { chinese: "北京烤鴨", unit: 2 },
+            { chinese: "高", unit: 2 },
+            { chinese: "大", unit: 2 },
+            { chinese: "份", unit: 2 },
+            { chinese: "個", unit: 2 },
+            { chinese: "位", unit: 2 },
+            { chinese: "塊", unit: 2 },
+            { chinese: "粒", unit: 2 },
+            { chinese: "串", unit: 2 },
+            { chinese: "隻", unit: 2 },
+            { chinese: "祖國", unit: 2 },
+            { chinese: "故宮", unit: 2 },
+            { chinese: "喝茶", unit: 2 },
+            { chinese: "餃子", unit: 2 },
+            { chinese: "冰糖葫蘆", unit: 2 },
+            { chinese: "喜歡", unit: 2 },
+            { chinese: "米飯", unit: 2 },
+            { english: "desk", unit: 2 },
+            { english: "chair", unit: 2 },
+            { english: "clock", unit: 2 },
+            { english: "scissors", unit: 2 },
+            { english: "computer", unit: 2 },
+            { english: "door", unit: 2 },
+            { english: "paper", unit: 2 },
+            { english: "crayon", unit: 2 },
+            { english: "phone", unit: 2 },
+            { english: "window", unit: 2 },
+            { english: "tablet", unit: 2 },
+            { english: "shelf", unit: 2 },
+            { english: "sun", unit: 2 },
+            { english: "star", unit: 2 },
+            { english: "you", unit: 2 },
+            { english: "he", unit: 2 },
+            { english: "she", unit: 2 },
+            { english: "it", unit: 2 },
+            { english: "they", unit: 2 },
+            { english: "we", unit: 2 },
+            { english: "drawing", unit: 2 },
+            { english: "reading", unit: 2 },
+            { english: "favourite", unit: 2 },
+            { english: "food", unit: 2 },
+            { english: "bag", unit: 2 },
+            { english: "pencil", unit: 2 },
+            { english: "rubber", unit: 2 },
+            { english: "ruler", unit: 2 },
+            { english: "book", unit: 2 },
+            { english: "pen", unit: 2 },
+            { english: "meat", unit: 2 },
+            { english: "bread", unit: 2 },
+            { english: "rice", unit: 2 },
+            { english: "egg", unit: 2 },
+            { english: "pizza", unit: 2 },
+            { english: "juice", unit: 2 },
+            { english: "milk", unit: 2 },
+            { english: "water", unit: 2 },
+            { english: "fruits", unit: 2 },
+            { english: "cheese", unit: 2 },
 
-            
-            // 單元三：光影秘密+復活節+清明節+母親節 (2026年3月30日至5月8日)
-            { chinese: "影子", unit: 3 },
-            { chinese: "彩虹", unit: 3 },
-            { chinese: "光", unit: 3 },
-            { chinese: "暗", unit: 3 },
-            { chinese: "手電筒", unit: 3 },
-            { chinese: "螢火蟲", unit: 3 },
-            { chinese: "大自然", unit: 3 },
-            { chinese: "昨天", unit: 3 },
-            { chinese: "明天", unit: 3 },
-            { chinese: "恐龍", unit: 3 },
-            { chinese: "熊貓", unit: 3 },
-            { chinese: "金魚", unit: 3 },
-            { chinese: "電燈", unit: 3 },
-            { chinese: "發光", unit: 3 },
-            { chinese: "光明", unit: 3 },
-            { chinese: "溫暖", unit: 3 },
-            { chinese: "太陽", unit: 3 },
-            { chinese: "月亮", unit: 3 },
-            { chinese: "星星", unit: 3 },
-            { chinese: "紅", unit: 3 },
-            { chinese: "橙", unit: 3 },
-            { chinese: "黃", unit: 3 },
-            { chinese: "綠", unit: 3 },
-            { chinese: "藍", unit: 3 },
-            { chinese: "紫", unit: 3 },
-            { chinese: "黑", unit: 3 },
-            { chinese: "白", unit: 3 },
-            { chinese: "棕", unit: 3 },
-            { chinese: "復活節", unit: 3 },
-            { chinese: "清明節", unit: 3 },
-            { chinese: "母親節", unit: 3 },
-            { english: "sky", unit: 3 },
-            { english: "(a)cloud", unit: 3 },
-            { english: "(the)moon", unit: 3 },
-            { english: "(the)rain", unit: 3 },
-            { english: "(a)rainbow", unit: 3 },
-            { english: "(a)start", unit: 3 },
-            { english: "(the)sun", unit: 3 },
-            { english: "(the)wind", unit: 3 },
-            { english: "shadow", unit: 3 },
-            { english: "torch", unit: 3 },
-            { english: "candle", unit: 3 },
-            { english: "six", unit: 3 },
-            { english: "seven", unit: 3 },
-            { english: "eight", unit: 3 },
-            { english: "nine", unit: 3 },
-            { english: "ten", unit: 3 },
-            
-            // 單元四：寵物小主人+專題活動+夏天+兒童節+端午節+父親節 (2026年5月1日至6月5日)
-            { chinese: "大象", unit: 4 },
-            { chinese: "鯨魚", unit: 4 },
-            { chinese: "長頸鹿", unit: 4 },
-            { chinese: "貓頭鷹", unit: 4 },
-            { chinese: "海豚", unit: 4 },
-            { chinese: "獅子", unit: 4 },
-            { chinese: "動物", unit: 4 },
-            { chinese: "小鳥", unit: 4 },
-            { chinese: "昆蟲", unit: 4 },
-            { chinese: "夏天", unit: 4 },
-            { chinese: "兒童節", unit: 4 },
-            { chinese: "端午節", unit: 4 },
-            { chinese: "父親節", unit: 4 },
-            { english: "bird", unit: 4 },
-            { english: "rabbit", unit: 4 },
-            { english: "turtle", unit: 4 },
-            { english: "fish", unit: 4 },
-            { english: "cow", unit: 4 },
-            { english: "duck", unit: 4 },
-            { english: "spring", unit: 4 },
-            { english: "flower", unit: 4 },
-            { english: "summer", unit: 4 },
-            { english: "beach", unit: 4 },
-            { english: "fly", unit: 4 },
-            { english: "run", unit: 4 },
-            { english: "walk", unit: 4 },
-            { english: "jump", unit: 4 },
-            { english: "climb", unit: 4 },
-            { english: "swim", unit: 4 },
-            { english: "hot", unit: 4 },
-          
+            // 單元三：健康生活（詞彙待補）
+            // 單元四：動物世界（詞彙待補）
+            // 單元五：我的社區（詞彙待補）
+            // 單元六：小學生活（詞彙待補）
+            // 單元七：奇妙的水（詞彙待補）
+            // 單元八：方案活動（詞彙待補）
         ];
 
         // 狀態變數
@@ -1188,51 +1259,58 @@
         }
 
         // 同步調整字體大小（立即執行，避免跳動）
+        // 規則：以「卡片高度」為字級上限（盡可能放到最大）；若字數太多而超出寬度，則改以「寬度」為準縮小。
         function adjustFontSizeSync() {
             try {
                 const wordElement = wordDisplay;
-                if (!wordElement || !wordElement.textContent || wordElement.textContent === '沒有詞彙') {
-                    return;
-                }
-                
+                if (!wordElement) return;
+
+                const text = wordElement.textContent;
+                if (!text || text === '沒有詞彙') return;
+
                 const flashcard = wordElement.closest('.flashcard');
-                if (!flashcard || flashcard.offsetWidth === 0) {
+                if (!flashcard || flashcard.offsetWidth === 0 || flashcard.offsetHeight === 0) {
                     return;
                 }
-                
-                // 1. 計算可用寬度：按鈕已移至底部，使用完整寬度
-                const flashcardWidth = flashcard.offsetWidth;
-                let availableWidth = flashcardWidth - 80; // 基礎左右 padding (40px * 2)
-                
-                if (availableWidth < 100) availableWidth = 100; // 防止過窄
-                
-                // 2. 初始字體大小設定
-                const maxFontSize = isChinese ? 72 : 64;
-                let currentSize = maxFontSize;
-                
-                // 先設置為最大字體
-                wordElement.style.fontSize = currentSize + 'px';
+
+                // 1. 取得卡片「內容區」實際可用寬度與高度（扣除 padding）
+                const cardStyle = window.getComputedStyle(flashcard);
+                const padX = (parseFloat(cardStyle.paddingLeft) || 0) + (parseFloat(cardStyle.paddingRight) || 0);
+                const padY = (parseFloat(cardStyle.paddingTop) || 0) + (parseFloat(cardStyle.paddingBottom) || 0);
+
+                const availWidth = Math.max(40, flashcard.clientWidth - padX);
+                const availHeight = Math.max(30, flashcard.clientHeight - padY);
+
+                // 扣掉文字下方的 margin，才是文字真正可用的高度
+                const wordStyle = window.getComputedStyle(wordElement);
+                const marginBottom = parseFloat(wordStyle.marginBottom) || 0;
+                const safeHeight = Math.max(20, availHeight - marginBottom);
+
+                // 2. 以 100px 為基準量測文字的實際寬度（暫時解除 max-width 限制）
                 wordElement.style.whiteSpace = 'nowrap';
-                
-                // 3. 快速估算與調整 (避免過多次循環)
-                // 獲取實際渲染寬度
-                let currentWidth = wordElement.scrollWidth;
-                
-                // 如果實際寬度大於可用寬度，按比例縮小
-                if (currentWidth > availableWidth) {
-                    // 計算縮放比例，並稍微多縮一點 (0.95) 確保安全
-                    const ratio = (availableWidth / currentWidth) * 0.95;
-                    currentSize = Math.floor(currentSize * ratio);
-                    currentSize = Math.max(currentSize, 16); // 最小字體限制
-                    wordElement.style.fontSize = currentSize + 'px';
-                }
-                
-                // 4. 精確微調：如果還是超出，逐步縮小 (處理邊界情況)
-                while (wordElement.scrollWidth > availableWidth && currentSize > 16) {
-                    currentSize -= 2;
-                    wordElement.style.fontSize = currentSize + 'px';
-                }
-                
+                wordElement.style.lineHeight = '1';
+                const prevMaxWidth = wordElement.style.maxWidth;
+                wordElement.style.maxWidth = 'none';
+                wordElement.style.fontSize = '100px';
+                const measuredWidth = Math.max(1, wordElement.scrollWidth);
+                wordElement.style.maxWidth = prevMaxWidth;
+
+                // 3. 依寬度可容納的最大字級（單行文字寬度與字級成正比）
+                const sizeByWidth = (availWidth / measuredWidth) * 100;
+
+                // 4. 依高度可容納的最大字級（line-height:1 → 文字高度 ≈ 字級）
+                const sizeByHeight = safeHeight;
+
+                // 5. 取兩者較小者：字少時由高度決定（放到最大），字多時由寬度決定（配合螢幕）
+                let targetSize = Math.min(sizeByWidth, sizeByHeight);
+
+                // 留 4% 安全邊距，避免字型邊界略微溢出
+                targetSize = Math.floor(targetSize * 0.96);
+
+                // 極端長句仍須可讀，設合理下限
+                if (targetSize < 12) targetSize = 12;
+
+                wordElement.style.fontSize = targetSize + 'px';
             } catch (e) {
                 console.error('Font size adjustment error:', e);
             }
@@ -1400,6 +1478,9 @@
         // 篩選圓框點擊事件（支持多選）
         document.querySelectorAll('.filter-circle').forEach(circle => {
             circle.addEventListener('click', () => {
+                // 尚無詞彙的單元不可勾選
+                if (circle.classList.contains('disabled')) return;
+
                 const filterUnitData = circle.getAttribute('data-filter-unit');
                 const filterUnit = filterUnitData === 'review' ? 'review' : parseInt(filterUnitData);
                 
@@ -1420,6 +1501,32 @@
                 updateFlashcard();
             });
         });
+
+        // 標記「尚無詞彙」的單元：篩選圓框反白並停用勾選
+        function initUnitAvailability() {
+            // 收集目前已有詞彙的單元編號
+            const availableUnits = new Set(vocabulary.map(item => item.unit));
+
+            document.querySelectorAll('.filter-circle').forEach(circle => {
+                const raw = circle.getAttribute('data-filter-unit');
+                if (raw === 'review') return; // 重點複習為動態內容，保持可用
+
+                const unitNum = parseInt(raw);
+                if (!availableUnits.has(unitNum)) {
+                    circle.classList.add('disabled');
+                    circle.classList.remove('active');
+                    circle.setAttribute('aria-disabled', 'true');
+                    circle.title = '此單元尚未輸入詞彙';
+                } else {
+                    circle.classList.remove('disabled');
+                    circle.removeAttribute('aria-disabled');
+                    circle.removeAttribute('title');
+                }
+            });
+        }
+
+        // 初始化單元可用狀態
+        initUnitAvailability();
 
         // 添加到重點複習
         addToReviewBtn.addEventListener('click', () => {
@@ -1475,19 +1582,32 @@
             chineseList.innerHTML = '';
             englishList.innerHTML = '';
             
+            let hasChinese = false;
+            let hasEnglish = false;
+            
             // 分別填入中英文詞條（只顯示存在的）
             unitWords.forEach(word => {
                 if (word.chinese) {
                     const li = document.createElement('li');
                     li.textContent = word.chinese;
                     chineseList.appendChild(li);
+                    hasChinese = true;
                 }
                 if (word.english) {
                     const li = document.createElement('li');
                     li.textContent = word.english;
                     englishList.appendChild(li);
+                    hasEnglish = true;
                 }
             });
+            
+            // 若該單元尚未輸入詞彙，顯示提示
+            if (!hasChinese) {
+                chineseList.innerHTML = '<li style="color: #999;">暫無詞彙</li>';
+            }
+            if (!hasEnglish) {
+                englishList.innerHTML = '<li style="color: #999;">暫無詞彙</li>';
+            }
             
             // 隱藏清除按鈕
             reviewClearBtnContainer.style.display = 'none';
@@ -1656,6 +1776,8 @@
             // 重置切換標誌（延遲一點確保狀態已更新）
             setTimeout(() => {
                 isTogglingFullscreen = false;
+                // 全螢幕切換後卡片尺寸改變，重新計算字級
+                adjustFontSizeSync();
             }, 50);
         }
 
