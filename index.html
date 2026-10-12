@@ -34,7 +34,9 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 20px;
+            /* 底部預留空間：避免內容與固定於底部的單元面板重疊（由 JS 依面板實際高度更新） */
+            --bottom-reserve: 132px;
+            padding: 10px 20px var(--bottom-reserve);
             position: fixed !important;
             top: 0 !important;
             left: 0 !important;
@@ -58,6 +60,11 @@
             -webkit-overflow-scrolling: none;
         }
 
+        /* 內容高度超出可用空間時改為頂端對齊，避免上下被裁切 */
+        body.content-top {
+            align-items: flex-start;
+        }
+
         .flashcard-container {
             width: 100%;
             max-width: 520px;
@@ -68,16 +75,19 @@
         /* 單元選擇面板 - 底部固定 */
         .unit-panel {
             position: fixed;
-            left: 50%;
+            left: 0;
+            right: 0;
             bottom: 16px;
-            transform: translateX(-50%);
+            /* 使用滿寬容器 + 內容置中，避免 left:50% + translateX(-50%) 使 fixed 元素
+               被壓縮成視窗寬度一半而提早換行（會導致面板變高、壓到上方內容） */
             display: flex;
             flex-direction: row;
             flex-wrap: wrap;
             justify-content: center;
             align-items: center;
             gap: 10px;
-            max-width: calc(100vw - 24px);
+            padding: 0 12px;
+            box-sizing: border-box;
             z-index: 20;
         }
 
@@ -233,15 +243,9 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            transition: transform 0.2s ease-out;
             touch-action: pan-y;
-            will-change: transform;
             transform: translateZ(0);
             -webkit-transform: translateZ(0);
-        }
-
-        .flashcard:hover {
-            transform: scale(1.03);
         }
 
         .word {
@@ -545,7 +549,7 @@
 
         @media (max-width: 480px) {
             body {
-                padding: 10px 8px;
+                padding: 8px 8px var(--bottom-reserve);
                 justify-content: center;
                 align-items: center;
             }
@@ -627,21 +631,22 @@
                 flex-shrink: 1 !important;
             }
             
-            /* 底部單元面板：8 個單元需縮小並允許換行 */
+            /* 底部單元面板：9 個按鈕縮小並以單行排列，避免佔用過多高度 */
             .unit-panel {
-                gap: 6px;
+                gap: 4px;
                 bottom: 10px;
+                padding: 0 6px;
             }
 
             .unit-btn {
-                width: 38px;
-                height: 38px;
+                width: 36px;
+                height: 36px;
                 font-size: 13px;
             }
 
             .filter-circle {
-                width: 30px;
-                height: 30px;
+                width: 28px;
+                height: 28px;
                 border-width: 2px;
                 margin-bottom: 5px;
             }
@@ -671,6 +676,11 @@
                 max-width: calc(100vw - 60px);
             }
 
+            .unit-panel {
+                gap: 3px;
+                padding: 0 4px;
+            }
+
             .unit-btn {
                 width: 34px;
                 height: 34px;
@@ -678,8 +688,8 @@
             }
 
             .filter-circle {
-                width: 27px;
-                height: 27px;
+                width: 26px;
+                height: 26px;
             }
 
             .flashcard {
@@ -707,7 +717,7 @@
             }
 
             .unit-panel {
-                transform: translateX(-50%) scale(0.9);
+                transform: scale(0.9);
             }
         }
 
@@ -717,7 +727,7 @@
             }
 
             .unit-panel {
-                transform: translateX(-50%) scale(0.85);
+                transform: scale(0.85);
                 bottom: 6px;
             }
         }
@@ -875,7 +885,7 @@
         <div class="flashcard">
             <button id="prevBtn" class="nav-btn nav-btn-left" aria-label="上一個">◀</button>
             <button id="nextBtn" class="nav-btn nav-btn-right" aria-label="下一個">▶</button>
-            <div class="word" id="wordDisplay" role="status" aria-live="polite">聽聲音</div>
+            <div class="word" id="wordDisplay" role="status" aria-live="polite"></div>
             <button id="addToReviewBtn" class="add-btn">+</button>
         </div>
 
@@ -1086,6 +1096,8 @@
         let displayOrder = [];
         let selectedUnits = []; // 選中的單元篩選（支持多選）
         let reviewVocabulary = []; // 重點複習詞彙
+        let isUpdating = false; // 防止按鈕連點（必須先宣告，初始化流程會用到）
+        let buttonClickTimer = null;
 
         // DOM 元素
         const wordDisplay = document.getElementById('wordDisplay');
@@ -1141,18 +1153,8 @@
             let sourceVocab = [];
             
             if (selectedUnits.length === 0) {
-                // 如果沒有選中任何單元，顯示所有詞彙（包括重點複習）
-                sourceVocab = [...vocabulary];
-                // 將重點複習詞彙也加入（避免重複）
-                reviewVocabulary.forEach(reviewItem => {
-                    const exists = sourceVocab.some(item => 
-                        (item.chinese && reviewItem.chinese && item.chinese === reviewItem.chinese) ||
-                        (item.english && reviewItem.english && item.english === reviewItem.english)
-                    );
-                    if (!exists) {
-                        sourceVocab.push(reviewItem);
-                    }
-                });
+                // 未勾選任何主題時，顯示框內不顯示任何內容
+                sourceVocab = [];
             } else {
                 // 如果選中了單元，混合顯示
                 const hasReview = selectedUnits.includes('review');
@@ -1200,10 +1202,14 @@
         function updateFlashcardSync() {
             const currentVocab = getCurrentVocabulary();
             if (currentVocab.length === 0) {
-                wordDisplay.textContent = '沒有詞彙';
+                // 未勾選任何主題（或該語言無詞彙）時，顯示框內保持空白
+                wordDisplay.className = `word ${isChinese ? '' : 'english'}`;
+                wordDisplay.textContent = '';
+                wordDisplay.style.fontSize = '';
                 unitInfo.textContent = '';
-                prevBtn.disabled = false;
-                nextBtn.disabled = false;
+                unitInfo.style.display = 'none';
+                prevBtn.disabled = true;
+                nextBtn.disabled = true;
                 isUpdating = false;
                 return;
             }
@@ -1237,6 +1243,7 @@
             adjustFontSizeSync();
             
             // 顯示單元標籤
+            unitInfo.style.display = '';
             if (wordData.unit === 'review') {
                 unitInfo.textContent = '重點複習';
             } else {
@@ -1316,6 +1323,37 @@
             }
         }
 
+        // 依底部單元面板的實際高度預留空間，避免內容（全螢幕按鈕／單元標籤）與面板重疊
+        function updateBottomReserve() {
+            try {
+                const panel = document.querySelector('.unit-panel');
+                if (!panel) return;
+
+                const rect = panel.getBoundingClientRect();
+                let reserve = 132; // 預設值（CSS 亦有相同後備值）
+
+                // 面板隱藏時（例如全螢幕模式）不需預留
+                if (rect.height > 0) {
+                    // 由面板頂端到視窗底部的距離，再加上安全間距
+                    reserve = Math.ceil(window.innerHeight - rect.top + 14);
+                }
+
+                document.body.style.setProperty('--bottom-reserve', reserve + 'px');
+
+                // 若內容本身比可用空間還高，改為頂端對齊，避免上下被裁切
+                const container = document.querySelector('.flashcard-container');
+                if (container) {
+                    const bodyStyle = window.getComputedStyle(document.body);
+                    const padTop = parseFloat(bodyStyle.paddingTop) || 0;
+                    const padBottom = parseFloat(bodyStyle.paddingBottom) || 0;
+                    const available = window.innerHeight - padTop - padBottom;
+                    document.body.classList.toggle('content-top', container.offsetHeight > available - 4);
+                }
+            } catch (e) {
+                console.error('Bottom reserve error:', e);
+            }
+        }
+
         // 異步調整字體大小（用於窗口大小變化等情況）
         let fontSizeAdjustTimer = null;
         function adjustFontSize() {
@@ -1333,6 +1371,7 @@
         // 初始化
         loadReviewVocabulary();
         initDisplayOrder();
+        updateBottomReserve();
         updateFlashcard();
 
         // 事件監聽器
@@ -1374,9 +1413,7 @@
             updateFlashcard();
         });
 
-        // 按鈕點擊防抖
-        let buttonClickTimer = null;
-        let isUpdating = false;
+        // 按鈕點擊防抖（isUpdating／buttonClickTimer 已於狀態變數區宣告）
 
         prevBtn.addEventListener('click', (e) => {
             e.preventDefault();
@@ -1778,6 +1815,8 @@
                 isTogglingFullscreen = false;
                 // 全螢幕切換後卡片尺寸改變，重新計算字級
                 adjustFontSizeSync();
+                // 面板顯示狀態改變，重新計算底部預留空間
+                updateBottomReserve();
             }, 50);
         }
 
@@ -1921,10 +1960,19 @@
         window.addEventListener('resize', function() {
             clearTimeout(resizeTimer);
             resizeTimer = setTimeout(function() {
+                updateBottomReserve();
                 if (wordDisplay) {
                     adjustFontSize();
                 }
             }, 100);
+        });
+
+        // 平板／手機旋轉時重新計算配置
+        window.addEventListener('orientationchange', function() {
+            setTimeout(function() {
+                updateBottomReserve();
+                adjustFontSize();
+            }, 250);
         });
     </script>
 </body>
