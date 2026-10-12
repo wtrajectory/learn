@@ -263,7 +263,11 @@
             max-width: 100%;
             box-sizing: border-box;
             opacity: 1;
-            transition: opacity 0.1s ease;
+            transition: opacity 0.08s ease;
+            /* 文字本身不需接收點擊。字級放大後，字框（連同字形墨跡溢出區）
+               會蓋住卡片內的 ◀ ▶ 按鈕，造成「按鈕點不到」——設為 none 後
+               點擊會直接穿透到按鈕，滑動換卡仍由 .flashcard 接收，不受影響。 */
+            pointer-events: none;
         }
 
         .word.english {
@@ -360,7 +364,10 @@
             font-size: 20px;
             font-weight: bold;
             cursor: pointer;
-            transition: all 0.15s ease-out;
+            /* 只過場「外觀」屬性。原本的 transition: all 會讓寬高／left／bottom／font-size
+               在進入全螢幕時一起進入 150ms 動畫，按鈕尺寸與位置卡在動畫中間值，
+               造成「看得到卻點不到」。改為只過場 transform／背景／陰影後，尺寸立即生效。 */
+            transition: transform 0.15s ease-out, background-color 0.15s ease-out, box-shadow 0.15s ease-out;
             box-shadow: 0 5px 15px rgba(255, 87, 34, 0.4);
             will-change: transform;
             transform: translateX(-50%) translateZ(0);
@@ -800,23 +807,61 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
+            /* 全螢幕已由卡片高度自適應，取消矮螢幕的整體縮放，避免浪費空間 */
+            transform: none;
+            transform-origin: center center;
         }
 
+        /* 全螢幕時盡量吃滿可用空間：左右加寬（善用兩側空白）、上下加高（放寬字級上限） */
         .fullscreen-mode .flashcard {
-            width: 90%;
-            max-width: 1400px;
-            margin: 0 auto 35px;
+            width: min(95vw, 1700px);
+            max-width: none;
+            margin: 0 auto 24px;
             border-radius: 20px;
-            padding: 50px 60px;
-            height: min(68vh, 760px);
+            /* 內距縮小，把空間讓給文字 */
+            padding: 26px 40px;
+            /* 高度＝視窗高扣除下方「退出全螢幕」按鈕區，上限 1100px */
+            height: min(calc(100vh - 148px), 1100px);
         }
 
         .fullscreen-mode .word {
-            font-size: 120px;
+            /* 下方留出卡片內導航圓鈕的空間（margin 會使文字在剩餘區域居中），其餘全部給文字。
+               104px ≈ 按鈕 68px + 下緣 22px + 安全間距，避免大字壓到按鈕 */
+            margin-bottom: 104px;
+            font-size: 220px; /* 僅為 JS 失效時的後備值，實際字級由 JS 計算 */
         }
 
         .fullscreen-mode .word.english {
-            font-size: 100px;
+            font-size: 190px;
+        }
+
+        /* 全螢幕時卡片內的 ◀ ▶ 導航鈕加大，方便點擊（原本僅 40px） */
+        .fullscreen-mode .flashcard .nav-btn {
+            width: 68px !important;
+            height: 68px !important;
+            min-width: 68px !important;
+            min-height: 68px !important;
+            max-width: 68px !important;
+            max-height: 68px !important;
+            aspect-ratio: 1 / 1 !important;
+            font-size: 30px !important;
+            bottom: 22px;
+        }
+
+        /* 加大後的位置：更靠卡片兩側，避開中央文字 */
+        .fullscreen-mode .nav-btn-left {
+            left: 20%;
+        }
+
+        .fullscreen-mode .nav-btn-right {
+            left: 80%;
+        }
+
+        /* 全螢幕時「退出全螢幕」按鈕也加大 */
+        .fullscreen-mode .fullscreen-controls .nav-btn {
+            padding: 16px 44px !important;
+            font-size: 20px !important;
+            min-width: 180px !important;
         }
     </style>
 </head>
@@ -1233,10 +1278,10 @@
             // 【重要修正】直接取值，因為 getCurrentVocabulary() 已經過濾過空值了
             let displayText = isChinese ? wordData.chinese : wordData.english;
             
-            // 先設置為調整狀態（降低透明度）
-            wordDisplay.className = `word adjusting ${isChinese ? '' : 'english'}`;
+            // 直接套用最終樣式：不做淡出／淡入，文字與字級一次到位，切換更即時
+            wordDisplay.className = `word ${isChinese ? '' : 'english'}`;
             
-            // 先設置文字內容（但不顯示，等待字體調整）
+            // 設置文字內容
             wordDisplay.textContent = displayText || '沒有詞彙';
             
             // 立即調整字體大小（同步執行，避免跳動）
@@ -1253,11 +1298,6 @@
             // 移除按鈕禁用
             prevBtn.disabled = false;
             nextBtn.disabled = false;
-            
-            // 恢復正常顯示
-            requestAnimationFrame(() => {
-                wordDisplay.className = `word ${isChinese ? '' : 'english'}`;
-            });
         }
 
         // 更新閃卡內容
@@ -1414,6 +1454,7 @@
         });
 
         // 按鈕點擊防抖（isUpdating／buttonClickTimer 已於狀態變數區宣告）
+        // 鎖定時間由 200ms 縮短為 70ms：連續點擊可即時換字，仍足以擋掉同一點擊的重複觸發
 
         prevBtn.addEventListener('click', (e) => {
             e.preventDefault();
@@ -1439,7 +1480,7 @@
             buttonClickTimer = setTimeout(() => {
                 buttonClickTimer = null;
                 isUpdating = false;
-            }, 200);
+            }, 70);
             
             return false;
         });
@@ -1472,7 +1513,7 @@
             buttonClickTimer = setTimeout(() => {
                 buttonClickTimer = null;
                 isUpdating = false;
-            }, 200);
+            }, 70);
             
             return false;
         });
